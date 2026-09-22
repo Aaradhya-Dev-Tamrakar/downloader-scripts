@@ -1,15 +1,6 @@
-<#
-.SYNOPSIS
-    Smart clipboard downloader with native 1-click format selection dialog.
-
-.DESCRIPTION
-    Auto-detects and auto-pastes the YouTube or YouTube Music URL from the clipboard.
-    Shows an editable URL box (so you can review or paste a different link),
-    and gives you two 1-click buttons:
-      [🎵 Download Audio (MP3)] -> C:\Users\Aaradhya\Music
-      [🎬 Download Video (MP4)] -> C:\Users\Aaradhya\Videos\yt-dlp
-    Sends a native toast notification upon completion.
-#>
+# Set console output encoding to UTF-8 to ensure unicode/emojis render correctly
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 
 [CmdletBinding()]
 param (
@@ -19,18 +10,37 @@ param (
     [string]$Url
 )
 
-# Read clipboard
-$clipboardText = ""
-try {
-    Add-Type -AssemblyName System.Windows.Forms
-    $clipboardText = [System.Windows.Forms.Clipboard]::GetText().Trim()
-} catch {
-    $clipboardText = (Get-Clipboard 2>$null)
-    if ($clipboardText) { $clipboardText = $clipboardText.Trim() }
+# Robust clipboard reading function
+function Get-ClipboardUrl {
+    $text = ""
+    # Method 1: Windows Forms STA
+    try {
+        Add-Type -AssemblyName System.Windows.Forms
+        $text = [System.Windows.Forms.Clipboard]::GetText()
+    } catch {}
+
+    # Method 2: WPF Clipboard
+    if ([string]::IsNullOrWhiteSpace($text)) {
+        try {
+            Add-Type -AssemblyName PresentationCore
+            $text = [System.Windows.Clipboard]::GetText()
+        } catch {}
+    }
+
+    # Method 3: PowerShell 5+ Get-Clipboard
+    if ([string]::IsNullOrWhiteSpace($text)) {
+        try {
+            $text = (Get-Clipboard 2>$null)
+            if ($text -is [array]) { $text = $text -join "`n" }
+        } catch {}
+    }
+
+    if ($text) { return $text.Trim() }
+    return ""
 }
 
 if ([string]::IsNullOrWhiteSpace($Url)) {
-    $Url = $clipboardText
+    $Url = Get-ClipboardUrl
 }
 
 function Show-Notification {
@@ -58,13 +68,15 @@ function Show-Notification {
         $toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
         [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("DownloaderScripts").Show($toast)
     } catch {
-        Add-Type -AssemblyName System.Windows.Forms
-        $balloon = New-Object System.Windows.Forms.NotifyIcon
-        $balloon.Icon = [System.Drawing.SystemIcons]::Information
-        $balloon.BalloonTipTitle = $Title
-        $balloon.BalloonTipText = $Message
-        $balloon.Visible = $true
-        $balloon.ShowBalloonTip(4000)
+        try {
+            Add-Type -AssemblyName System.Windows.Forms
+            $balloon = New-Object System.Windows.Forms.NotifyIcon
+            $balloon.Icon = [System.Drawing.SystemIcons]::Information
+            $balloon.BalloonTipTitle = $Title
+            $balloon.BalloonTipText = $Message
+            $balloon.Visible = $true
+            $balloon.ShowBalloonTip(4000)
+        } catch {}
     }
 }
 
@@ -72,15 +84,19 @@ function Show-Notification {
 if ($Mode -eq "prompt") {
     Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
 
+    # If clipboard wasn't ready when process launched, try reading once more
+    if ([string]::IsNullOrWhiteSpace($Url)) {
+        $Url = Get-ClipboardUrl
+    }
+
     [xml]$xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Downloader (yt-dlp)" Height="230" Width="460"
+        Title="Downloader (yt-dlp)" Height="240" Width="470"
         WindowStartupLocation="CenterScreen" WindowStyle="ToolWindow" ResizeMode="NoResize"
         Background="#18181b" Foreground="#f4f4f5" Topmost="True">
-    <Grid Margin="20">
+    <Grid Margin="22">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -88,7 +104,7 @@ if ($Mode -eq "prompt") {
         
         <TextBlock Grid.Row="0" Text="Download from YouTube" FontSize="16" FontWeight="SemiBold" Foreground="#ffffff" Margin="0,0,0,6"/>
         
-        <TextBox Name="TxtUrl" Grid.Row="1" Height="32" FontSize="12" Padding="6,4"
+        <TextBox Name="TxtUrl" Grid.Row="1" Height="34" FontSize="12" Padding="8,6"
                  Background="#27272a" Foreground="#ffffff" BorderBrush="#3f3f46" BorderThickness="1" Margin="0,0,0,16">
             <TextBox.Resources>
                 <Style TargetType="Border">
@@ -98,7 +114,7 @@ if ($Mode -eq "prompt") {
         </TextBox>
         
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Button Name="BtnAudio" Content="🎵 Audio (MP3)" Width="195" Height="44" Margin="0,0,12,0"
+            <Button Name="BtnAudio" Content="[Audio] MP3" Width="195" Height="44" Margin="0,0,12,0"
                     Background="#2563eb" Foreground="#ffffff" FontSize="13" FontWeight="SemiBold" Cursor="Hand" BorderThickness="0">
                 <Button.Resources>
                     <Style TargetType="Border">
@@ -106,7 +122,7 @@ if ($Mode -eq "prompt") {
                     </Style>
                 </Button.Resources>
             </Button>
-            <Button Name="BtnVideo" Content="🎬 Video (1080p MP4)" Width="195" Height="44"
+            <Button Name="BtnVideo" Content="[Video] 1080p MP4" Width="195" Height="44"
                     Background="#059669" Foreground="#ffffff" FontSize="13" FontWeight="SemiBold" Cursor="Hand" BorderThickness="0">
                 <Button.Resources>
                     <Style TargetType="Border">
@@ -124,6 +140,18 @@ if ($Mode -eq "prompt") {
 
     $txtUrl = $window.FindName("TxtUrl")
     $txtUrl.Text = $Url
+    if (-not [string]::IsNullOrWhiteSpace($Url)) {
+        $txtUrl.SelectAll()
+    }
+
+    # Focus text box on load
+    $window.Add_Loaded({
+        $txtUrl.Focus()
+        if ([string]::IsNullOrWhiteSpace($txtUrl.Text)) {
+            $latest = Get-ClipboardUrl
+            if ($latest) { $txtUrl.Text = $latest }
+        }
+    })
 
     $chosenMode = $null
     $btnAudio = $window.FindName("BtnAudio")
@@ -151,7 +179,7 @@ if ($Mode -eq "prompt") {
 
 # Validate URL pattern
 if ([string]::IsNullOrWhiteSpace($Url) -or ($Url -notmatch "https?://(www\.|music\.)?(youtube\.com|youtu\.be)/.+")) {
-    Show-Notification -Title "Downloader: Invalid URL" -Message "Please enter or copy a valid YouTube URL." -TargetFolder "C:\Users\Aaradhya\Music"
+    Show-Notification -Title "Downloader: Invalid URL" -Message "Please copy or enter a valid YouTube URL." -TargetFolder "C:\Users\Aaradhya\Music"
     Write-Warning "Not a valid YouTube URL: $Url"
     exit 1
 }
