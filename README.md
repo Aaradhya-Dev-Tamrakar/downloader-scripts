@@ -12,8 +12,9 @@ Simply copy any YouTube or YouTube Music URL in your browser (`Ctrl + C`), then 
 
 | Hotkey | Action | Destination |
 | :--- | :--- | :--- |
-| <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>M</kbd> | Download **Audio** (MP3 + Cover + ID3 Tags) | `C:\Users\Aaradhya\Music\<Playlist|Single>\<Title>.mp3` |
-| <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>V</kbd> | Download **Video** (1080p/720p HD MP4) | `C:\Users\Aaradhya\Videos\yt-dlp\<Playlist|Single>\<Title>.mp4` |
+| <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>D</kbd> | ⚡ **Popup Selector**: 1-click choose Audio vs Video | Prompts popup |
+| <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>M</kbd> | 🎵 **Instant Audio** (MP3 + Cover + ID3 Tags) | `C:\Users\Aaradhya\Music\<Playlist|Single>\<Title>.mp3` |
+| <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>V</kbd> | 🎬 **Instant Video** (1080p/720p HD MP4) | `C:\Users\Aaradhya\Videos\yt-dlp\<Playlist|Single>\<Title>.mp4` |
 
 *Sends a native Windows Toast Notification when downloading starts and when complete (with click-to-open).*
 
@@ -28,8 +29,9 @@ Simply copy any YouTube or YouTube Music URL in your browser (`Ctrl + C`), then 
 
 Once configured, you can download from any PowerShell window without changing directories:
 
-- `dlm` — Downloads audio from clipboard (or pass URL: `dlm "https://..."`)
-- `dlv` — Downloads video from clipboard (or pass URL: `dlv "https://..."`)
+- `dl`  — Reads clipboard and opens 1-click format selector popup
+- `dlm` — Downloads audio directly from clipboard (or pass URL: `dlm "https://..."`)
+- `dlv` — Downloads video directly from clipboard (or pass URL: `dlv "https://..."`)
 
 ---
 

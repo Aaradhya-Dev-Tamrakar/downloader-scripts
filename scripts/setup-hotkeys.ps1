@@ -5,28 +5,38 @@
 
 $ScriptDir = $PSScriptRoot
 $RepoRoot = Split-Path -Parent $ScriptDir
-$AudioScript = Join-Path $ScriptDir "clipboard-downloader.ps1"
+$DownloaderScript = Join-Path $ScriptDir "clipboard-downloader.ps1"
 
-# 1. Create Desktop / Start Menu Quick Shortcuts
+# 1. Create Desktop Quick Shortcuts
 $WshShell = New-Object -ComObject WScript.Shell
 $DesktopPath = [System.Environment]::GetFolderPath("Desktop")
 
-# Music Shortcut (Win + Alt + M equivalent shortcut)
+# Quick Prompt Shortcut: [Ctrl + Alt + D] -> Pops up 1-click Choice Window (Audio vs Video)
+$PromptShortcutPath = Join-Path $DesktopPath "Download from Clipboard.lnk"
+$ShortcutD = $WshShell.CreateShortcut($PromptShortcutPath)
+$ShortcutD.TargetPath = "powershell.exe"
+$ShortcutD.Arguments = "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$DownloaderScript`" -Mode prompt"
+$ShortcutD.IconLocation = "shell32.dll,264" # Download / transfer icon
+$ShortcutD.Hotkey = "CTRL+ALT+D"
+$ShortcutD.Description = "Ask Audio vs Video for YouTube link in clipboard"
+$ShortcutD.Save()
+
+# Direct Audio Shortcut: [Ctrl + Alt + M] -> Immediate MP3 Download
 $MusicShortcutPath = Join-Path $DesktopPath "Download Music (Clipboard).lnk"
 $ShortcutM = $WshShell.CreateShortcut($MusicShortcutPath)
 $ShortcutM.TargetPath = "powershell.exe"
-$ShortcutM.Arguments = "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$AudioScript`" -Mode audio"
-$ShortcutM.IconLocation = "shell32.dll,116" # Music / Audio note icon
+$ShortcutM.Arguments = "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$DownloaderScript`" -Mode audio"
+$ShortcutM.IconLocation = "shell32.dll,116" # Audio note icon
 $ShortcutM.Hotkey = "CTRL+ALT+M"
 $ShortcutM.Description = "Download audio from YouTube URL in Clipboard to Music"
 $ShortcutM.Save()
 
-# Video Shortcut (Win + Alt + V equivalent shortcut)
+# Direct Video Shortcut: [Ctrl + Alt + V] -> Immediate Video Download
 $VideoShortcutPath = Join-Path $DesktopPath "Download Video (Clipboard).lnk"
 $ShortcutV = $WshShell.CreateShortcut($VideoShortcutPath)
 $ShortcutV.TargetPath = "powershell.exe"
-$ShortcutV.Arguments = "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$AudioScript`" -Mode video"
-$ShortcutV.IconLocation = "shell32.dll,115" # Film / Video reel icon
+$ShortcutV.Arguments = "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$DownloaderScript`" -Mode video"
+$ShortcutV.IconLocation = "shell32.dll,115" # Video reel icon
 $ShortcutV.Hotkey = "CTRL+ALT+V"
 $ShortcutV.Description = "Download 1080p/720p video from YouTube URL in Clipboard to Videos\yt-dlp"
 $ShortcutV.Save()
@@ -40,14 +50,19 @@ if (-not (Test-Path $ProfileDir)) {
 $ProfileSnippet = @"
 
 # --- Downloader Scripts Zero-Click Integration ---
-function dlm { & "$AudioScript" -Mode audio @args }
-function dlv { & "$AudioScript" -Mode video @args }
+function dl  { & "$DownloaderScript" -Mode prompt @args }
+function dlm { & "$DownloaderScript" -Mode audio @args }
+function dlv { & "$DownloaderScript" -Mode video @args }
 # -------------------------------------------------
 "@
 
 if (Test-Path $PROFILE) {
     $existing = Get-Content $PROFILE -Raw
-    if ($existing -notmatch "Downloader Scripts Zero-Click Integration") {
+    if ($existing -match "# --- Downloader Scripts Zero-Click Integration ---") {
+        # Update snippet
+        $updated = $existing -replace '(?s)# --- Downloader Scripts Zero-Click Integration ---.*?# -------------------------------------------------', $ProfileSnippet.Trim()
+        Set-Content -Path $PROFILE -Value $updated
+    } else {
         Add-Content -Path $PROFILE -Value $ProfileSnippet
     }
 } else {
@@ -55,13 +70,15 @@ if (Test-Path $PROFILE) {
 }
 
 Write-Host "==========================================================" -ForegroundColor Green
-Write-Host "  ZERO-CLICK DOWNLOADER CONFIGURED SUCCESSFULLY" -ForegroundColor Cyan
+Write-Host "  SMART DOWNLOADER CONFIGURED SUCCESSFULLY" -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Green
-Write-Host "Desktop Shortcuts Created with Global Hotkeys:" -ForegroundColor Yellow
-Write-Host "  [Ctrl + Alt + M] -> Download Audio from Clipboard to C:\Users\Aaradhya\Music"
-Write-Host "  [Ctrl + Alt + V] -> Download Video from Clipboard to C:\Users\Aaradhya\Videos\yt-dlp"
+Write-Host "Global Hotkeys (Press anywhere in Windows after copying link):" -ForegroundColor Yellow
+Write-Host "  [Ctrl + Alt + D] -> ⚡ Popup Selector: 1-click choose Audio vs Video"
+Write-Host "  [Ctrl + Alt + M] -> 🎵 Instant Audio: Downloads directly to Music"
+Write-Host "  [Ctrl + Alt + V] -> 🎬 Instant Video: Downloads directly to Videos\yt-dlp"
 Write-Host ""
-Write-Host "PowerShell Terminal Aliases (active in new terminal sessions):" -ForegroundColor Yellow
-Write-Host "  dlm   -> Downloads music from clipboard (or URL)"
-Write-Host "  dlv   -> Downloads video from clipboard (or URL)"
+Write-Host "PowerShell Terminal Aliases:" -ForegroundColor Yellow
+Write-Host "  dl    -> Pops format choice for clipboard URL"
+Write-Host "  dlm   -> Direct audio download from clipboard (or URL)"
+Write-Host "  dlv   -> Direct video download from clipboard (or URL)"
 Write-Host "==========================================================" -ForegroundColor Green

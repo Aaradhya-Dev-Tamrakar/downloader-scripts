@@ -1,28 +1,21 @@
 <#
 .SYNOPSIS
-    Single-action clipboard downloader with native Windows toast notification.
+    Smart clipboard downloader with native mini prompt dialog or hotkey modes.
 
 .DESCRIPTION
-    Reads YouTube or YouTube Music URL directly from Windows Clipboard,
-    downloads audio (MP3 + tags + cover) or video (MP4) to designated folders,
-    and shows a native Windows toast notification upon completion.
-
-.PARAMETER Mode
-    'audio' (default) -> C:\Users\Aaradhya\Music
-    'video'           -> C:\Users\Aaradhya\Videos\yt-dlp
+    Reads YouTube / YouTube Music URL from clipboard.
+    If mode is not specified (e.g. single hotkey Ctrl+Alt+D), pops a native,
+    dark-themed 1-click modal to choose [🎵 Audio (MP3)] or [🎬 Video (MP4)].
+    If mode is specified (-Mode audio | video), proceeds immediately with zero clicks.
 #>
 
 [CmdletBinding()]
 param (
-    [ValidateSet("audio", "video", "mp3", "720p", "1080p")]
-    [string]$Mode = "audio",
+    [ValidateSet("prompt", "audio", "video", "mp3", "720p", "1080p")]
+    [string]$Mode = "prompt",
 
     [string]$Url
 )
-
-# Normalize Mode
-if ($Mode -eq "mp3") { $Mode = "audio" }
-if ($Mode -eq "720p" -or $Mode -eq "1080p") { $Mode = "video" }
 
 # 1. Read URL from Clipboard if not provided via parameter
 if ([string]::IsNullOrWhiteSpace($Url)) {
@@ -60,7 +53,6 @@ function Show-Notification {
         $toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
         [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("DownloaderScripts").Show($toast)
     } catch {
-        # Fallback to standard tray notification if WinRT XML fails
         Add-Type -AssemblyName System.Windows.Forms
         $balloon = New-Object System.Windows.Forms.NotifyIcon
         $balloon.Icon = [System.Drawing.SystemIcons]::Information
@@ -77,6 +69,77 @@ if ([string]::IsNullOrWhiteSpace($Url) -or ($Url -notmatch "https?://(www\.|musi
     Write-Warning "Clipboard does not contain a valid YouTube or YouTube Music URL."
     exit 1
 }
+
+# If Mode is "prompt", show modern lightweight WPF selector dialog
+if ($Mode -eq "prompt") {
+    Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
+
+    [xml]$xaml = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="yt-dlp Quick Downloader" Height="220" Width="430"
+        WindowStartupLocation="CenterScreen" WindowStyle="ToolWindow" ResizeMode="NoResize"
+        Background="#18181b" Foreground="#f4f4f5" Topmost="True">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <TextBlock Grid.Row="0" Text="Choose Download Format" FontSize="16" FontWeight="SemiBold" Foreground="#ffffff"/>
+        <TextBlock Grid.Row="1" Text="$([System.Security.SecurityElement]::Escape($Url))" FontSize="11" Foreground="#a1a1aa" TextTrimming="CharacterEllipsis" Margin="0,4,0,16"/>
+        
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Button Name="BtnAudio" Content="🎵 Audio (MP3 + Tags)" Width="175" Height="42" Margin="0,0,12,0"
+                    Background="#2563eb" Foreground="#ffffff" FontSize="13" FontWeight="Medium" Cursor="Hand" BorderThickness="0">
+                <Button.Resources>
+                    <Style TargetType="Border">
+                        <Setter Property="CornerRadius" Value="6"/>
+                    </Style>
+                </Button.Resources>
+            </Button>
+            <Button Name="BtnVideo" Content="🎬 Video (1080p MP4)" Width="175" Height="42"
+                    Background="#059669" Foreground="#ffffff" FontSize="13" FontWeight="Medium" Cursor="Hand" BorderThickness="0">
+                <Button.Resources>
+                    <Style TargetType="Border">
+                        <Setter Property="CornerRadius" Value="6"/>
+                    </Style>
+                </Button.Resources>
+            </Button>
+        </StackPanel>
+    </Grid>
+</Window>
+"@
+
+    $reader = [System.Xml.XmlNodeReader]::new($xaml)
+    $window = [System.Windows.Markup.XamlReader]::Load($reader)
+
+    $chosenMode = $null
+    $btnAudio = $window.FindName("BtnAudio")
+    $btnVideo = $window.FindName("BtnVideo")
+
+    $btnAudio.Add_Click({
+        $script:chosenMode = "audio"
+        $window.Close()
+    })
+
+    $btnVideo.Add_Click({
+        $script:chosenMode = "video"
+        $window.Close()
+    })
+
+    $window.ShowDialog() | Out-Null
+
+    if (-not $chosenMode) {
+        # User closed window / cancelled
+        exit 0
+    }
+    $Mode = $chosenMode
+}
+
+# Normalize Mode
+if ($Mode -eq "mp3") { $Mode = "audio" }
+if ($Mode -eq "720p" -or $Mode -eq "1080p") { $Mode = "video" }
 
 # Resolve paths
 $ScriptDir = $PSScriptRoot
