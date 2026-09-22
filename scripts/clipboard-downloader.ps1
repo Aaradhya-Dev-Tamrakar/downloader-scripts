@@ -1,7 +1,3 @@
-# Set console output encoding to UTF-8 to ensure unicode/emojis render correctly
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$OutputEncoding = [System.Text.Encoding]::UTF8
-
 [CmdletBinding()]
 param (
     [ValidateSet("prompt", "audio", "video", "mp3", "720p", "1080p")]
@@ -84,7 +80,6 @@ function Show-Notification {
 if ($Mode -eq "prompt") {
     Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
 
-    # If clipboard wasn't ready when process launched, try reading once more
     if ([string]::IsNullOrWhiteSpace($Url)) {
         $Url = Get-ClipboardUrl
     }
