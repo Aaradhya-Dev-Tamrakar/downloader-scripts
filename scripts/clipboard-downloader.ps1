@@ -13,13 +13,11 @@ param (
 # Robust clipboard reading function
 function Get-ClipboardUrl {
     $text = ""
-    # Method 1: Windows Forms STA
     try {
         Add-Type -AssemblyName System.Windows.Forms
         $text = [System.Windows.Forms.Clipboard]::GetText()
     } catch {}
 
-    # Method 2: WPF Clipboard
     if ([string]::IsNullOrWhiteSpace($text)) {
         try {
             Add-Type -AssemblyName PresentationCore
@@ -27,7 +25,6 @@ function Get-ClipboardUrl {
         } catch {}
     }
 
-    # Method 3: PowerShell 5+ Get-Clipboard
     if ([string]::IsNullOrWhiteSpace($text)) {
         try {
             $text = (Get-Clipboard 2>$null)
@@ -80,7 +77,7 @@ function Show-Notification {
     }
 }
 
-# If Mode is prompt, show dialog with split-button dropdowns directly attached to Audio and Video actions
+# If Mode is prompt, show modern dark card UI
 if ($Mode -eq "prompt") {
     Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
 
@@ -91,91 +88,158 @@ if ($Mode -eq "prompt") {
     [xml]$xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Downloader (yt-dlp)" Height="240" Width="520"
-        WindowStartupLocation="CenterScreen" WindowStyle="ToolWindow" ResizeMode="NoResize"
-        Background="#18181b" Foreground="#f4f4f5" Topmost="True">
-    <Grid Margin="22">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-        
-        <TextBlock Grid.Row="0" Text="Download from YouTube" FontSize="16" FontWeight="SemiBold" Foreground="#ffffff" Margin="0,0,0,6"/>
-        
-        <TextBox Name="TxtUrl" Grid.Row="1" Height="34" FontSize="12" Padding="8,6"
-                 Background="#27272a" Foreground="#ffffff" BorderBrush="#3f3f46" BorderThickness="1" Margin="0,0,0,18">
-            <TextBox.Resources>
-                <Style TargetType="Border">
-                    <Setter Property="CornerRadius" Value="4"/>
-                </Style>
-            </TextBox.Resources>
-        </TextBox>
+        Title="Downloader Hub" Height="285" Width="510"
+        WindowStartupLocation="CenterScreen" WindowStyle="None" AllowsTransparency="True"
+        Background="Transparent" Topmost="True">
+    <Border Background="#121214" CornerRadius="12" BorderBrush="#27272a" BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="25" ShadowDepth="4" Opacity="0.6" Color="#000000"/>
+        </Border.Effect>
+        <Grid Margin="22,16,22,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Title & Close Bar -->
+                <RowDefinition Height="Auto"/> <!-- URL Box -->
+                <RowDefinition Height="*"/>    <!-- Cards Grid -->
+            </Grid.RowDefinitions>
 
-        <!-- Two Action Columns with Integrated Split Dropdowns -->
-        <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="14"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+            <!-- Title Bar (Draggable) -->
+            <Grid Grid.Row="0" Margin="0,0,0,14" Name="TitleBar" Background="Transparent" Cursor="SizeAll">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="yt-dlp Downloader" FontSize="15" FontWeight="SemiBold" Foreground="#ffffff"/>
+                    <TextBlock Text="  •  Auto-Clipboard" FontSize="11" Foreground="#71717a" VerticalAlignment="Center" Margin="0,1,0,0"/>
+                </StackPanel>
+                <Button Name="BtnClose" Grid.Column="1" Content="✕" Width="28" Height="28"
+                        Background="Transparent" Foreground="#a1a1aa" FontSize="12" FontWeight="Bold"
+                        BorderThickness="0" Cursor="Hand">
+                    <Button.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="14"/>
+                        </Style>
+                    </Button.Resources>
+                </Button>
+            </Grid>
 
-            <!-- Audio Split Control (Blue) -->
-            <Border Grid.Column="0" Background="#2563eb" CornerRadius="6" Height="46">
-                <Grid>
+            <!-- URL Input Container with Paste Button -->
+            <Border Grid.Row="1" Background="#18181b" CornerRadius="8" BorderBrush="#27272a" BorderThickness="1" Margin="0,0,0,16" Height="40">
+                <Grid Margin="10,0,6,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="1"/>
-                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-
-                    <Button Name="BtnAudio" Grid.Column="0" Content="[Audio]" Background="Transparent" Foreground="#ffffff"
-                            FontSize="14" FontWeight="SemiBold" Cursor="Hand" BorderThickness="0"/>
-
-                    <Rectangle Grid.Column="1" Fill="#3b82f6" Width="1"/>
-
-                    <ComboBox Name="CmbAudio" Grid.Column="2" SelectedIndex="0" VerticalContentAlignment="Center"
-                              Background="#1d4ed8" Foreground="#ffffff" BorderThickness="0" Cursor="Hand" Padding="6,0,0,0">
-                        <ComboBoxItem Content="MP3"/>
-                        <ComboBoxItem Content="FLAC"/>
-                        <ComboBoxItem Content="M4A"/>
-                        <ComboBoxItem Content="OPUS"/>
-                        <ComboBoxItem Content="WAV"/>
-                    </ComboBox>
+                    <TextBox Name="TxtUrl" Grid.Column="0" Height="30" FontSize="12"
+                             Background="Transparent" Foreground="#f4f4f5" BorderThickness="0"
+                             VerticalContentAlignment="Center" CaretBrush="#3b82f6"/>
+                    <Button Name="BtnPaste" Grid.Column="1" Content="Paste" Height="26" Padding="10,0"
+                            Background="#27272a" Foreground="#a1a1aa" FontSize="11" FontWeight="Medium"
+                            BorderThickness="0" Cursor="Hand">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="4"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
                 </Grid>
             </Border>
 
-            <!-- Video Split Control (Emerald Green) -->
-            <Border Grid.Column="2" Background="#059669" CornerRadius="6" Height="46">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="1"/>
-                        <ColumnDefinition Width="90"/>
-                    </Grid.ColumnDefinitions>
+            <!-- Two Action Cards: Audio and Video -->
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="14"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
 
-                    <Button Name="BtnVideo" Grid.Column="0" Content="[Video]" Background="Transparent" Foreground="#ffffff"
-                            FontSize="14" FontWeight="SemiBold" Cursor="Hand" BorderThickness="0"/>
+                <!-- Audio Card -->
+                <Border Grid.Column="0" Background="#18181b" CornerRadius="8" BorderBrush="#27272a" BorderThickness="1" Padding="14,12">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
 
-                    <Rectangle Grid.Column="1" Fill="#10b981" Width="1"/>
+                        <Grid Grid.Row="0" Margin="0,0,0,8">
+                            <TextBlock Text="Audio Stream" FontSize="12" FontWeight="SemiBold" Foreground="#60a5fa"/>
+                            <ComboBox Name="CmbAudio" HorizontalAlignment="Right" Width="72" Height="22" SelectedIndex="0"
+                                      Background="#27272a" Foreground="#f4f4f5" BorderBrush="#3f3f46" BorderThickness="1" FontSize="11" Cursor="Hand">
+                                <ComboBoxItem Content="MP3"/>
+                                <ComboBoxItem Content="FLAC"/>
+                                <ComboBoxItem Content="M4A"/>
+                                <ComboBoxItem Content="OPUS"/>
+                                <ComboBoxItem Content="WAV"/>
+                            </ComboBox>
+                        </Grid>
 
-                    <ComboBox Name="CmbVideo" Grid.Column="2" SelectedIndex="0" VerticalContentAlignment="Center"
-                              Background="#047857" Foreground="#ffffff" BorderThickness="0" Cursor="Hand" Padding="6,0,0,0">
-                        <ComboBoxItem Content="1080p"/>
-                        <ComboBoxItem Content="4K / Max"/>
-                        <ComboBoxItem Content="720p"/>
-                        <ComboBoxItem Content="480p"/>
-                        <ComboBoxItem Content="360p"/>
-                    </ComboBox>
-                </Grid>
-            </Border>
+                        <TextBlock Grid.Row="1" Text="Embeds cover art &amp; ID3 tags" FontSize="11" Foreground="#71717a" Margin="0,0,0,10"/>
+
+                        <Button Name="BtnAudio" Grid.Row="2" Content="Download Music" Height="38"
+                                Background="#2563eb" Foreground="#ffffff" FontSize="13" FontWeight="SemiBold"
+                                BorderThickness="0" Cursor="Hand">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="6"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <!-- Video Card -->
+                <Border Grid.Column="2" Background="#18181b" CornerRadius="8" BorderBrush="#27272a" BorderThickness="1" Padding="14,12">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0" Margin="0,0,0,8">
+                            <TextBlock Text="Video Stream" FontSize="12" FontWeight="SemiBold" Foreground="#34d399"/>
+                            <ComboBox Name="CmbVideo" HorizontalAlignment="Right" Width="82" Height="22" SelectedIndex="0"
+                                      Background="#27272a" Foreground="#f4f4f5" BorderBrush="#3f3f46" BorderThickness="1" FontSize="11" Cursor="Hand">
+                                <ComboBoxItem Content="1080p"/>
+                                <ComboBoxItem Content="4K / Max"/>
+                                <ComboBoxItem Content="720p"/>
+                                <ComboBoxItem Content="480p"/>
+                                <ComboBoxItem Content="360p"/>
+                            </ComboBox>
+                        </Grid>
+
+                        <TextBlock Grid.Row="1" Text="Direct to Videos\yt-dlp" FontSize="11" Foreground="#71717a" Margin="0,0,0,10"/>
+
+                        <Button Name="BtnVideo" Grid.Row="2" Content="Download Video" Height="38"
+                                Background="#059669" Foreground="#ffffff" FontSize="13" FontWeight="SemiBold"
+                                BorderThickness="0" Cursor="Hand">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="6"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+                    </Grid>
+                </Border>
+            </Grid>
         </Grid>
-    </Grid>
+    </Border>
 </Window>
 "@
 
     $reader = [System.Xml.XmlNodeReader]::new($xaml)
     $window = [System.Windows.Markup.XamlReader]::Load($reader)
+
+    $titleBar = $window.FindName("TitleBar")
+    $titleBar.Add_MouseLeftButtonDown({
+        $window.DragMove()
+    })
+
+    $btnClose = $window.FindName("BtnClose")
+    $btnClose.Add_Click({
+        $window.Close()
+    })
 
     $txtUrl = $window.FindName("TxtUrl")
     $txtUrl.Text = $Url
@@ -183,10 +247,18 @@ if ($Mode -eq "prompt") {
         $txtUrl.SelectAll()
     }
 
+    $btnPaste = $window.FindName("BtnPaste")
+    $btnPaste.Add_Click({
+        $cb = Get-ClipboardUrl
+        if ($cb) {
+            $txtUrl.Text = $cb
+            $txtUrl.SelectAll()
+        }
+    })
+
     $cmbAudio = $window.FindName("CmbAudio")
     $cmbVideo = $window.FindName("CmbVideo")
 
-    # Focus text box on load
     $window.Add_Loaded({
         $txtUrl.Focus()
         if ([string]::IsNullOrWhiteSpace($txtUrl.Text)) {
