@@ -77,7 +77,7 @@ function Show-Notification {
     }
 }
 
-# If Mode is prompt, show modern dark card UI
+# If Mode is prompt, show modern dark card UI with ASCII-only symbols and themed item containers
 if ($Mode -eq "prompt") {
     Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
 
@@ -91,6 +91,28 @@ if ($Mode -eq "prompt") {
         Title="Downloader Hub" Height="285" Width="510"
         WindowStartupLocation="CenterScreen" WindowStyle="None" AllowsTransparency="True"
         Background="Transparent" Topmost="True">
+    <Window.Resources>
+        <!-- High Contrast Dark Dropdown Item Style -->
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Background" Value="#27272a"/>
+            <Setter Property="Foreground" Value="#ffffff"/>
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsHighlighted" Value="True">
+                    <Setter Property="Background" Value="#3b82f6"/>
+                    <Setter Property="Foreground" Value="#ffffff"/>
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#2563eb"/>
+                    <Setter Property="Foreground" Value="#ffffff"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
     <Border Background="#121214" CornerRadius="12" BorderBrush="#27272a" BorderThickness="1">
         <Border.Effect>
             <DropShadowEffect BlurRadius="25" ShadowDepth="4" Opacity="0.6" Color="#000000"/>
@@ -102,7 +124,7 @@ if ($Mode -eq "prompt") {
                 <RowDefinition Height="*"/>    <!-- Cards Grid -->
             </Grid.RowDefinitions>
 
-            <!-- Title Bar (Draggable) -->
+            <!-- Title Bar (Draggable, pure ASCII) -->
             <Grid Grid.Row="0" Margin="0,0,0,14" Name="TitleBar" Background="Transparent" Cursor="SizeAll">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -110,10 +132,10 @@ if ($Mode -eq "prompt") {
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="yt-dlp Downloader" FontSize="15" FontWeight="SemiBold" Foreground="#ffffff"/>
-                    <TextBlock Text="  •  Auto-Clipboard" FontSize="11" Foreground="#71717a" VerticalAlignment="Center" Margin="0,1,0,0"/>
+                    <TextBlock Text="  -  Auto-Clipboard" FontSize="11" Foreground="#71717a" VerticalAlignment="Center" Margin="0,1,0,0"/>
                 </StackPanel>
-                <Button Name="BtnClose" Grid.Column="1" Content="✕" Width="28" Height="28"
-                        Background="Transparent" Foreground="#a1a1aa" FontSize="12" FontWeight="Bold"
+                <Button Name="BtnClose" Grid.Column="1" Content="X" Width="28" Height="28"
+                        Background="#27272a" Foreground="#a1a1aa" FontSize="11" FontWeight="Bold"
                         BorderThickness="0" Cursor="Hand">
                     <Button.Resources>
                         <Style TargetType="Border">
@@ -163,9 +185,10 @@ if ($Mode -eq "prompt") {
                         </Grid.RowDefinitions>
 
                         <Grid Grid.Row="0" Margin="0,0,0,8">
-                            <TextBlock Text="Audio Stream" FontSize="12" FontWeight="SemiBold" Foreground="#60a5fa"/>
-                            <ComboBox Name="CmbAudio" HorizontalAlignment="Right" Width="72" Height="22" SelectedIndex="0"
-                                      Background="#27272a" Foreground="#f4f4f5" BorderBrush="#3f3f46" BorderThickness="1" FontSize="11" Cursor="Hand">
+                            <TextBlock Text="Audio Stream" FontSize="12" FontWeight="SemiBold" Foreground="#60a5fa" VerticalAlignment="Center"/>
+                            <ComboBox Name="CmbAudio" HorizontalAlignment="Right" Width="78" Height="24" SelectedIndex="0"
+                                      Background="#27272a" Foreground="#ffffff" BorderBrush="#3f3f46" BorderThickness="1"
+                                      FontSize="11" FontWeight="SemiBold" Cursor="Hand" VerticalContentAlignment="Center">
                                 <ComboBoxItem Content="MP3"/>
                                 <ComboBoxItem Content="FLAC"/>
                                 <ComboBoxItem Content="M4A"/>
@@ -198,9 +221,10 @@ if ($Mode -eq "prompt") {
                         </Grid.RowDefinitions>
 
                         <Grid Grid.Row="0" Margin="0,0,0,8">
-                            <TextBlock Text="Video Stream" FontSize="12" FontWeight="SemiBold" Foreground="#34d399"/>
-                            <ComboBox Name="CmbVideo" HorizontalAlignment="Right" Width="82" Height="22" SelectedIndex="0"
-                                      Background="#27272a" Foreground="#f4f4f5" BorderBrush="#3f3f46" BorderThickness="1" FontSize="11" Cursor="Hand">
+                            <TextBlock Text="Video Stream" FontSize="12" FontWeight="SemiBold" Foreground="#34d399" VerticalAlignment="Center"/>
+                            <ComboBox Name="CmbVideo" HorizontalAlignment="Right" Width="88" Height="24" SelectedIndex="0"
+                                      Background="#27272a" Foreground="#ffffff" BorderBrush="#3f3f46" BorderThickness="1"
+                                      FontSize="11" FontWeight="SemiBold" Cursor="Hand" VerticalContentAlignment="Center">
                                 <ComboBoxItem Content="1080p"/>
                                 <ComboBoxItem Content="4K / Max"/>
                                 <ComboBoxItem Content="720p"/>
