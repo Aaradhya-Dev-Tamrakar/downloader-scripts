@@ -1,43 +1,54 @@
 # Downloader Scripts
 
-Modular PowerShell and Windows Batch automation suite for batch audio/video extraction via `yt-dlp` with automatic tag and thumbnail embedding, deduplication archives, and dedicated routing:
+Modular PowerShell and Windows Batch automation suite for batch audio/video extraction via `yt-dlp` with automatic tag and thumbnail embedding, deduplication archives, dedicated routing, and zero-click global hotkey integration:
 - **Audio / Music**: `C:\Users\Aaradhya\Music`
 - **Video**: `C:\Users\Aaradhya\Videos\yt-dlp`
+
+---
+
+## ⚡ Option 1: Zero-Click Global Hotkeys (Recommended)
+
+Simply copy any YouTube or YouTube Music URL in your browser (`Ctrl + C`), then press:
+
+| Hotkey | Action | Destination |
+| :--- | :--- | :--- |
+| <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>M</kbd> | Download **Audio** (MP3 + Cover + ID3 Tags) | `C:\Users\Aaradhya\Music\<Playlist|Single>\<Title>.mp3` |
+| <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>V</kbd> | Download **Video** (1080p/720p HD MP4) | `C:\Users\Aaradhya\Videos\yt-dlp\<Playlist|Single>\<Title>.mp4` |
+
+*Sends a native Windows Toast Notification when downloading starts and when complete (with click-to-open).*
+
+### Reinstall / Setup Hotkeys
+```powershell
+.\scripts\setup-hotkeys.ps1
+```
+
+---
+
+## 💻 Terminal CLI & Profile Shortcuts
+
+Once configured, you can download from any PowerShell window without changing directories:
+
+- `dlm` — Downloads audio from clipboard (or pass URL: `dlm "https://..."`)
+- `dlv` — Downloads video from clipboard (or pass URL: `dlv "https://..."`)
+
+---
 
 ## Repository Structure
 
 ```text
 Downloader scripts/
 ├── scripts/
-│   ├── yt.ps1           # Parameterized CLI downloader (-Mode mp3|720p -Url <url>)
-│   ├── yt-music.ps1     # Interactive YouTube Music downloader with tag/artwork embedding
-│   ├── yt-video480.bat  # Fast 480p batch video download preset
-│   └── yt-video720.bat  # 720p HD batch video download preset
-├── sync.ps1             # Automated Git synchronizer with pre-commit secret scanning
-├── README.md            # Documentation and usage guide
-├── .gitignore           # Ignores credentials, archives, executables, and media
-└── (Local files)        # yt-dlp.exe, cookies.txt, downloads.txt (ignored by git)
+│   ├── clipboard-downloader.ps1 # Core zero-click engine with Toast notifications
+│   ├── setup-hotkeys.ps1        # Global hotkey & profile shortcut installer
+│   ├── yt.ps1                   # Parameterized CLI downloader (-Mode mp3|720p -Url <url>)
+│   ├── yt-music.ps1             # Interactive YouTube Music downloader with tag/artwork embedding
+│   ├── yt-video480.bat          # Fast 480p batch video download preset
+│   └── yt-video720.bat          # 720p HD batch video download preset
+├── sync.ps1                     # Automated Git synchronizer with pre-commit secret scanning
+├── README.md                    # Documentation and usage guide
+├── .gitignore                   # Ignores credentials, archives, executables, and media
+└── (Local files)                # yt-dlp.exe, cookies.txt, downloads.txt (ignored by git)
 ```
-
-## Quick Start
-
-### 1. Music Download (Interactive)
-```powershell
-.\scripts\yt-music.ps1
-```
-Prompts for a single track or playlist URL, fetches metadata, embeds thumbnails & ID3 tags, and saves directly to:
-`C:\Users\Aaradhya\Music\<Playlist or Single>\<Title>.mp3`
-
-### 2. Parameterized CLI
-```powershell
-.\scripts\yt.ps1 -Mode mp3 -Url "https://youtu.be/..."     # Saves to C:\Users\Aaradhya\Music
-.\scripts\yt.ps1 -Mode 720p -Url "https://youtu.be/..."   # Saves to C:\Users\Aaradhya\Videos\yt-dlp
-```
-
-### 3. Fast Video Batch Presets
-Double-click or run (saves to `C:\Users\Aaradhya\Videos\yt-dlp\<Playlist or Single>\<Title>.mp4`):
-- `.\scripts\yt-video480.bat` (480p MP4)
-- `.\scripts\yt-video720.bat` (720p MP4)
 
 ## Prerequisites
 
