@@ -91,6 +91,85 @@ if ($Mode -eq "prompt") {
         Title="Downloader Hub" Height="285" Width="510"
         WindowStartupLocation="CenterScreen" WindowStyle="None" AllowsTransparency="True"
         Background="Transparent" Topmost="True">
+    <Window.Resources>
+        <ControlTemplate x:Key="DarkComboToggle" TargetType="ToggleButton">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="20" />
+                </Grid.ColumnDefinitions>
+                <Border x:Name="Border" Grid.ColumnSpan="2" CornerRadius="4" Background="#27272a" BorderBrush="#3f3f46" BorderThickness="1" />
+                <Path x:Name="Arrow" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Data="M 0 0 L 4 4 L 8 0 Z" Fill="#a1a1aa" />
+            </Grid>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="Border" Property="Background" Value="#3f3f46"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <Style TargetType="ComboBox">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Foreground" Value="#ffffff"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton Name="ToggleButton" Template="{StaticResource DarkComboToggle}" Focusable="False"
+                                          IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          ClickMode="Press"/>
+                            <ContentPresenter Name="ContentSite" IsHitTestVisible="False"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                              Margin="8,2,20,2" VerticalAlignment="Center" HorizontalAlignment="Left">
+                                <ContentPresenter.Resources>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="#ffffff"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </Style>
+                                </ContentPresenter.Resources>
+                            </ContentPresenter>
+                            <Popup Name="Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
+                                <Grid Name="DropDown" SnapsToDevicePixels="True" MinWidth="{TemplateBinding ActualWidth}" MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <Border Background="#18181b" BorderThickness="1" BorderBrush="#3f3f46" CornerRadius="4" Margin="0,2,0,0" Padding="2">
+                                        <ScrollViewer SnapsToDevicePixels="True">
+                                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained" />
+                                        </ScrollViewer>
+                                    </Border>
+                                </Grid>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Foreground" Value="#f4f4f5"/>
+            <Setter Property="Background" Value="#18181b"/>
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border Name="ItemBorder" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="3">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="#2563eb"/>
+                                <Setter Property="Foreground" Value="#ffffff"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
     <Border Background="#121214" CornerRadius="12" BorderBrush="#27272a" BorderThickness="1">
         <Border.Effect>
             <DropShadowEffect BlurRadius="25" ShadowDepth="4" Opacity="0.6" Color="#000000"/>
@@ -166,16 +245,13 @@ if ($Mode -eq "prompt") {
                             <TextBlock Text="Audio Stream" FontSize="12" FontWeight="SemiBold" Foreground="#60a5fa" VerticalAlignment="Center"/>
                             
                             <!-- Custom Dark Formatted ComboBox for Audio -->
-                            <Border HorizontalAlignment="Right" Background="#27272a" CornerRadius="4" BorderBrush="#3f3f46" BorderThickness="1" Height="26" Width="82">
-                                <ComboBox Name="CmbAudio" Background="Transparent" Foreground="#ffffff" BorderThickness="0"
-                                          FontSize="11" FontWeight="SemiBold" Cursor="Hand" VerticalContentAlignment="Center" Padding="6,0,0,0">
-                                    <ComboBoxItem Content="MP3" IsSelected="True" Foreground="#ffffff" Background="#27272a" FontWeight="Bold"/>
-                                    <ComboBoxItem Content="FLAC" Foreground="#ffffff" Background="#27272a" FontWeight="Bold"/>
-                                    <ComboBoxItem Content="M4A" Foreground="#ffffff" Background="#27272a" FontWeight="Bold"/>
-                                    <ComboBoxItem Content="OPUS" Foreground="#ffffff" Background="#27272a" FontWeight="Bold"/>
-                                    <ComboBoxItem Content="WAV" Foreground="#ffffff" Background="#27272a" FontWeight="Bold"/>
-                                </ComboBox>
-                            </Border>
+                            <ComboBox Name="CmbAudio" HorizontalAlignment="Right" Width="82" Height="26" SelectedIndex="0">
+                                <ComboBoxItem Content="MP3"/>
+                                <ComboBoxItem Content="FLAC"/>
+                                <ComboBoxItem Content="M4A"/>
+                                <ComboBoxItem Content="OPUS"/>
+                                <ComboBoxItem Content="WAV"/>
+                            </ComboBox>
                         </Grid>
 
                         <TextBlock Grid.Row="1" Text="Embeds cover art &amp; ID3 tags" FontSize="11" Foreground="#71717a" Margin="0,0,0,10"/>
@@ -205,16 +281,13 @@ if ($Mode -eq "prompt") {
                             <TextBlock Text="Video Stream" FontSize="12" FontWeight="SemiBold" Foreground="#34d399" VerticalAlignment="Center"/>
                             
                             <!-- Custom Dark Formatted ComboBox for Video -->
-                            <Border HorizontalAlignment="Right" Background="#27272a" CornerRadius="4" BorderBrush="#3f3f46" BorderThickness="1" Height="26" Width="92">
-                                <ComboBox Name="CmbVideo" Background="Transparent" Foreground="#ffffff" BorderThickness="0"
-                                          FontSize="11" FontWeight="SemiBold" Cursor="Hand" VerticalContentAlignment="Center" Padding="6,0,0,0">
-                                    <ComboBoxItem Content="1080p" IsSelected="True" Foreground="#ffffff" Background="#27272a" FontWeight="Bold"/>
-                                    <ComboBoxItem Content="4K / Max" Foreground="#ffffff" Background="#27272a" FontWeight="Bold"/>
-                                    <ComboBoxItem Content="720p" Foreground="#ffffff" Background="#27272a" FontWeight="Bold"/>
-                                    <ComboBoxItem Content="480p" Foreground="#ffffff" Background="#27272a" FontWeight="Bold"/>
-                                    <ComboBoxItem Content="360p" Foreground="#ffffff" Background="#27272a" FontWeight="Bold"/>
-                                </ComboBox>
-                            </Border>
+                            <ComboBox Name="CmbVideo" HorizontalAlignment="Right" Width="92" Height="26" SelectedIndex="0">
+                                <ComboBoxItem Content="1080p"/>
+                                <ComboBoxItem Content="4K / Max"/>
+                                <ComboBoxItem Content="720p"/>
+                                <ComboBoxItem Content="480p"/>
+                                <ComboBoxItem Content="360p"/>
+                            </ComboBox>
                         </Grid>
 
                         <TextBlock Grid.Row="1" Text="Direct to Videos\yt-dlp" FontSize="11" Foreground="#71717a" Margin="0,0,0,10"/>
@@ -266,17 +339,6 @@ if ($Mode -eq "prompt") {
 
     $cmbAudio = $window.FindName("CmbAudio")
     $cmbVideo = $window.FindName("CmbVideo")
-
-    # Force explicit black text when dropdown is rendered against Windows white system chrome
-    $fixItemText = {
-        param($cbControl)
-        foreach ($item in $cbControl.Items) {
-            $item.Foreground = [System.Windows.Media.Brushes]::Black
-            $item.FontWeight = [System.Windows.FontWeights]::Bold
-        }
-    }
-    &$fixItemText $cmbAudio
-    &$fixItemText $cmbVideo
 
     $window.Add_Loaded({
         $txtUrl.Focus()
