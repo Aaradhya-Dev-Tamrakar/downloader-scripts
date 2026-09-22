@@ -51,8 +51,6 @@ param (
     [switch]$Status
 )
 
-$ErrorActionPreference = "Stop"
-
 $TargetRemoteName = "origin"
 $TargetRemoteUrl  = "https://github.com/Aaradhya-Dev-Tamrakar/downloader-scripts.git"
 
@@ -158,104 +156,113 @@ function Get-AutoCommitMessage {
 }
 
 # --- Main Flow ---
-try {
-    Ensure-RemoteConfigured
+Ensure-RemoteConfigured
 
-    $currentBranch = (git branch --show-current 2>$null)
-    if (-not $currentBranch) {
-        $currentBranch = "main"
+$currentBranch = (git branch --show-current 2>$null)
+if ($currentBranch) { $currentBranch = $currentBranch.Trim() }
+if (-not $currentBranch) { $currentBranch = "main" }
+
+if ($Status) {
+    Write-Status "=== Downloader Scripts Repository Status ==="
+    Write-Status "Active Branch: $currentBranch"
+    git status -s
+    $unpushed = @(git log "$($TargetRemoteName)/$($currentBranch)..HEAD" --oneline 2>$null)
+    if ($unpushed.Count -gt 0) {
+        Write-Notice "Unpushed Commits ($($unpushed.Count)):"
+        $unpushed | ForEach-Object { Write-Host "  $_" -ForegroundColor Yellow }
+    } else {
+        Write-Success "All commits pushed to $TargetRemoteName/$currentBranch."
     }
+    exit 0
+}
 
-    if ($Status) {
-        Write-Status "=== Downloader Scripts Repository Status ==="
-        Write-Status "Active Branch: $currentBranch"
-        git status -s
-        $unpushed = @(git log "$($TargetRemoteName)/$($currentBranch)..HEAD" --oneline 2>$null)
-        if ($unpushed.Count -gt 0) {
-            Write-Notice "Unpushed Commits ($($unpushed.Count)):"
-            $unpushed | ForEach-Object { Write-Host "  $_" -ForegroundColor Yellow }
-        } else {
-            Write-Success "All commits pushed to $TargetRemoteName/$currentBranch."
-        }
-        return
-    }
+# 1. Pull latest changes
+Write-Status "Pulling latest updates from $TargetRemoteName/$currentBranch..."
+git pull --rebase --autostash $TargetRemoteName $currentBranch
+if ($LASTEXITCODE -ne 0) {
+    Write-Fail "git pull encountered errors or conflicts."
+    exit $LASTEXITCODE
+}
 
-    if ($PullOnly) {
-        Write-Status "Pulling latest updates with --rebase --autostash..."
-        git pull --rebase --autostash $TargetRemoteName $currentBranch
-        Write-Success "Pull completed."
-        return
-    }
+if ($PullOnly) {
+    Write-Success "Pull completed successfully (-PullOnly active)."
+    exit 0
+}
 
-    if ($PushOnly) {
+# 2. Check uncommitted changes
+$statusPorcelain = git status --porcelain 2>$null
+$hasUncommitted = [bool]($statusPorcelain -and $statusPorcelain.Trim().Length -gt 0)
+
+$unpushed = git rev-list "$TargetRemoteName/$currentBranch..HEAD" 2>$null
+$hasUnpushed = [bool]($unpushed -and $unpushed.Trim().Length -gt 0)
+
+if ($PushOnly) {
+    if ($hasUnpushed) {
         Write-Status "Pushing existing commits to $TargetRemoteName/$currentBranch..."
         git push $TargetRemoteName $currentBranch
-        Write-Success "Push completed."
-        return
+        Write-Success "Push completed successfully."
+    } else {
+        Write-Success "No unpushed commits found. Remote is up to date."
     }
-
-    # Stage all tracked & untracked non-ignored changes
-    git add -A
-
-    # Pre-commit secret scanning
-    $secrets = Find-StagedSecrets
-    if ($secrets.Count -gt 0) {
-        Write-Fail "SECURITY ALERT: Potential secrets detected in staged diff!"
-        foreach ($s in $secrets) {
-            Write-Fail "  Pattern: $($s.Pattern) | Match: $($s.Snippet)"
-        }
-        git reset HEAD 2>$null | Out-Null
-        throw "Aborting commit due to detected secrets."
-    }
-
-    $stagedChanges = @(git diff --cached --name-only)
-    if ($stagedChanges.Count -eq 0) {
-        Write-Status "Working tree clean; checking for unpushed commits..."
-        $unpushed = @(git log "$($TargetRemoteName)/$($currentBranch)..HEAD" --oneline 2>$null)
-        if ($unpushed.Count -gt 0) {
-            Write-Status "Pushing $($unpushed.Count) unpushed commit(s)..."
-            if (-not $WhatIf -and -not $NoPush) {
-                git push $TargetRemoteName $currentBranch
-                Write-Success "Pushed successfully."
-            }
-        } else {
-            Write-Success "Repository is fully clean and up to date."
-        }
-        return
-    }
-
-    # Determine commit message
-    $finalMsg = $Message
-    if ([string]::IsNullOrWhiteSpace($finalMsg)) {
-        $finalMsg = Get-AutoCommitMessage
-    }
-
-    if ($WhatIf) {
-        Write-Notice "[WhatIf] Dry-run preview:"
-        Write-Notice "  Branch: $currentBranch"
-        Write-Notice "  Commit Message: $finalMsg"
-        Write-Notice "  Staged Files: $($stagedChanges -join ', ')"
-        git reset HEAD 2>$null | Out-Null
-        return
-    }
-
-    Write-Status "Committing changes ($($stagedChanges.Count) file(s))..."
-    git commit -m $finalMsg
-
-    if ($NoPush) {
-        Write-Success "Committed locally (push skipped via -NoPush)."
-        return
-    }
-
-    # Pull rebase before push
-    Write-Status "Syncing with remote..."
-    git pull --rebase --autostash $TargetRemoteName $currentBranch 2>$null | Out-Null
-
-    Write-Status "Pushing to $TargetRemoteName/$currentBranch..."
-    git push $TargetRemoteName $currentBranch
-    Write-Success "Successfully synchronized with $TargetRemoteUrl"
+    exit 0
 }
-catch {
-    Write-Fail "Sync failed: $_"
+
+if (-not $hasUncommitted) {
+    if ($hasUnpushed) {
+        Write-Notice "No local changes to commit, but local branch is ahead of remote."
+        if (-not $NoPush -and -not $WhatIf) {
+            Write-Status "Pushing pending commit(s) to $TargetRemoteName/$currentBranch..."
+            git push $TargetRemoteName $currentBranch
+            Write-Success "All commits synchronized to remote origin."
+        }
+    } else {
+        Write-Success "Working directory clean and synchronized with origin. Nothing to commit."
+    }
+    exit 0
+}
+
+# Stage all files
+git add -A
+
+# Pre-commit secret scan
+$secrets = Find-StagedSecrets
+if ($secrets.Count -gt 0) {
+    Write-Fail "SECURITY ALERT: Potential secrets detected in staged diff!"
+    foreach ($s in $secrets) {
+        Write-Fail "  Pattern: $($s.Pattern) | Match: $($s.Snippet)"
+    }
+    git reset HEAD 2>$null | Out-Null
     exit 1
+}
+
+$stagedChanges = @(git diff --cached --name-only)
+$finalMsg = $Message
+if ([string]::IsNullOrWhiteSpace($finalMsg)) {
+    $finalMsg = Get-AutoCommitMessage
+}
+
+if ($WhatIf) {
+    Write-Notice "[WhatIf] Dry-run preview:"
+    Write-Notice "  Branch: $currentBranch"
+    Write-Notice "  Commit Message: $finalMsg"
+    Write-Notice "  Staged Files: $($stagedChanges -join ', ')"
+    git reset HEAD 2>$null | Out-Null
+    exit 0
+}
+
+Write-Status "Committing changes ($($stagedChanges.Count) file(s))..."
+git commit -m $finalMsg
+
+if ($NoPush) {
+    Write-Success "Committed locally (push skipped via -NoPush)."
+    exit 0
+}
+
+Write-Status "Pushing to $TargetRemoteName/$currentBranch..."
+git push $TargetRemoteName $currentBranch
+if ($LASTEXITCODE -eq 0) {
+    Write-Success "Successfully synchronized with $TargetRemoteUrl"
+} else {
+    Write-Fail "git push failed."
+    exit $LASTEXITCODE
 }
