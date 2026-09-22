@@ -9,7 +9,7 @@ Modular PowerShell and Windows Batch automation suite for batch audio/video extr
 ## ⚡ The Single Shortcut Workflow
 
 1. Copy any YouTube or YouTube Music URL (`Ctrl + C`).
-2. Hit <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>D</kbd> (or double-click **YouTube Downloader** on your Desktop).
+2. Hit <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>D</kbd> (or double-click **`download.bat`** / **`YouTube Downloader.lnk`** on your Desktop).
 3. The link is **auto-pasted** into a clean, dark popup.
 4. Click:
    - **🎵 Audio (MP3)** $\to$ Saves to `C:\Users\Aaradhya\Music\<Playlist|Single>\<Title>.mp3`
