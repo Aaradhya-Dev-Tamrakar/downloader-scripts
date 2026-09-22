@@ -22,6 +22,3 @@ downloads.txt
 *.ogg
 *.avi
 *.mov
-
-# Ignore all subdirectories (download/music folders)
-*/
