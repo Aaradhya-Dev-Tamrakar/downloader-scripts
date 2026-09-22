@@ -11,11 +11,12 @@ Modular PowerShell and Windows Batch automation suite for batch audio/video extr
 1. Copy any YouTube or YouTube Music URL (`Ctrl + C`).
 2. Hit <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>D</kbd> (or double-click **`download.bat`** on your Desktop).
 3. The URL is **automatically pasted** into a floating dark-mode card modal with a dedicated "Paste" button.
-4. Choose your stream:
+4. If a playlist parameter (`list=`) is detected, a dark **"Download full playlist"** checkbox appears (defaults to single video for watch URLs, or entire playlist for pure playlist URLs).
+5. Choose your stream:
    - **🎵 Audio Card**: Format dropdown (`MP3` *default*, `FLAC`, `M4A`, `OPUS`, `WAV`) $\to$ Click **Download Music** to save with album artwork and ID3 tags to `C:\Users\Aaradhya\Music`.
    - **🎬 Video Card**: Quality dropdown (`1080p` *default*, `4K / Max`, `720p`, `480p`, `360p`) $\to$ Click **Download Video** to save MP4 to `C:\Users\Aaradhya\Videos\yt-dlp`.
 
-*Native Windows Toast Notification pings on start and completion (click to open the folder).*
+*Features automatic 24-hour cached `yt-dlp` nightly auto-updates with retry-on-failure, browser cookie fallback (Edge $\to$ Brave $\to$ Chrome), and native Windows Toast Notifications on start and completion.*
 
 ### Reinstall / Repair Shortcut
 ```powershell

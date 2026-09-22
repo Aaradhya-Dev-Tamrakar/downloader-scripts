@@ -7,8 +7,77 @@ param (
 
     [string]$Quality = "1080p",
 
-    [string]$Url
+    [string]$Url,
+
+    [switch]$Playlist
 )
+
+function Update-YtDlpNightly {
+    param(
+        [string]$YtDlpPath,
+        [string]$TargetDir,
+        [switch]$Force
+    )
+
+    if ([string]::IsNullOrWhiteSpace($YtDlpPath) -or -not (Test-Path $YtDlpPath)) {
+        return
+    }
+
+    $stampFile = Join-Path $TargetDir ".last_update"
+    $needsUpdate = $Force.IsPresent
+
+    if (-not $needsUpdate) {
+        if (-not (Test-Path $stampFile)) {
+            $needsUpdate = $true
+        } else {
+            $lastTime = (Get-Item $stampFile).LastWriteTime
+            if ((Get-Date) - $lastTime -gt (New-TimeSpan -Hours 24)) {
+                $needsUpdate = $true
+            }
+        }
+    }
+
+    if ($needsUpdate) {
+        Write-Host "Checking for yt-dlp nightly update..." -ForegroundColor Cyan
+        try {
+            & $YtDlpPath --update-to nightly
+            Set-Content -Path $stampFile -Value (Get-Date -Format "o") -Force
+        } catch {
+            Write-Warning "Failed to auto-update yt-dlp"
+        }
+    }
+}
+
+function Resolve-CookieArgs {
+    param(
+        [string]$RepoRoot,
+        [string]$ScriptDir
+    )
+
+    $localCookies = Join-Path $RepoRoot "cookies.txt"
+    if (-not (Test-Path $localCookies)) { $localCookies = Join-Path $ScriptDir "cookies.txt" }
+
+    if (Test-Path $localCookies) {
+        return @("--cookies", $localCookies)
+    }
+
+    # Browser cookie priority: Edge -> Brave -> Chrome
+    $edgeData = Join-Path $env:LOCALAPPDATA "Microsoft\Edge\User Data"
+    $braveData = Join-Path $env:LOCALAPPDATA "BraveSoftware\Brave-Browser\User Data"
+    $chromeData = Join-Path $env:LOCALAPPDATA "Google\Chrome\User Data"
+
+    if (Test-Path $edgeData) {
+        return @("--cookies-from-browser", "edge")
+    }
+    if (Test-Path $braveData) {
+        return @("--cookies-from-browser", "brave")
+    }
+    if (Test-Path $chromeData) {
+        return @("--cookies-from-browser", "chrome")
+    }
+
+    return @()
+}
 
 # Robust clipboard reading function
 function Get-ClipboardUrl {
@@ -88,7 +157,7 @@ if ($Mode -eq "prompt") {
     [xml]$xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Downloader Hub" Height="285" Width="510"
+        Title="Downloader Hub" Height="310" Width="510"
         WindowStartupLocation="CenterScreen" WindowStyle="None" AllowsTransparency="True"
         Background="Transparent" Topmost="True">
     <Window.Resources>
@@ -169,6 +238,35 @@ if ($Mode -eq "prompt") {
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="#a1a1aa"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border Name="CheckBorder" Width="14" Height="14" CornerRadius="3" Background="#27272a" BorderBrush="#3f3f46" BorderThickness="1" Margin="0,0,7,0">
+                                <Path Name="CheckMark" Data="M 2 6 L 5 9 L 10 2" Stroke="#ffffff" StrokeThickness="1.8" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="CheckBorder" Property="Background" Value="#2563eb"/>
+                                <Setter TargetName="CheckBorder" Property="BorderBrush" Value="#3b82f6"/>
+                                <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+                                <Setter Property="Foreground" Value="#ffffff"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="CheckBorder" Property="BorderBrush" Value="#71717a"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
     <Border Background="#121214" CornerRadius="12" BorderBrush="#27272a" BorderThickness="1">
         <Border.Effect>
@@ -178,6 +276,7 @@ if ($Mode -eq "prompt") {
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Title & Close Bar -->
                 <RowDefinition Height="Auto"/> <!-- URL Box -->
+                <RowDefinition Height="Auto"/> <!-- Playlist CheckBox Row -->
                 <RowDefinition Height="*"/>    <!-- Cards Grid -->
             </Grid.RowDefinitions>
 
@@ -203,7 +302,7 @@ if ($Mode -eq "prompt") {
             </Grid>
 
             <!-- URL Input Container with Paste Button -->
-            <Border Grid.Row="1" Background="#18181b" CornerRadius="8" BorderBrush="#27272a" BorderThickness="1" Margin="0,0,0,16" Height="40">
+            <Border Grid.Row="1" Background="#18181b" CornerRadius="8" BorderBrush="#27272a" BorderThickness="1" Margin="0,0,0,8" Height="40">
                 <Grid Margin="10,0,6,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -224,8 +323,13 @@ if ($Mode -eq "prompt") {
                 </Grid>
             </Border>
 
+            <!-- Playlist CheckBox Row -->
+            <Grid Grid.Row="2" Margin="2,0,0,10">
+                <CheckBox Name="ChkPlaylist" Content="Download full playlist (detected in link)" Visibility="Collapsed"/>
+            </Grid>
+
             <!-- Two Action Cards: Audio and Video -->
-            <Grid Grid.Row="2">
+            <Grid Grid.Row="3">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="14"/>
@@ -339,6 +443,24 @@ if ($Mode -eq "prompt") {
 
     $cmbAudio = $window.FindName("CmbAudio")
     $cmbVideo = $window.FindName("CmbVideo")
+    $chkPlaylist = $window.FindName("ChkPlaylist")
+
+    $updatePlaylistVisibility = {
+        param($currentUrl)
+        if ($currentUrl -match '[?&]list=') {
+            $chkPlaylist.Visibility = [System.Windows.Visibility]::Visible
+            if ($currentUrl -match '(youtube\.com|youtu\.be)/playlist\?') {
+                $chkPlaylist.IsChecked = $true
+            }
+        } else {
+            $chkPlaylist.Visibility = [System.Windows.Visibility]::Collapsed
+            $chkPlaylist.IsChecked = $false
+        }
+    }
+
+    $txtUrl.Add_TextChanged({
+        & $updatePlaylistVisibility $txtUrl.Text.Trim()
+    })
 
     $window.Add_Loaded({
         $txtUrl.Focus()
@@ -346,11 +468,13 @@ if ($Mode -eq "prompt") {
             $latest = Get-ClipboardUrl
             if ($latest) { $txtUrl.Text = $latest }
         }
+        & $updatePlaylistVisibility $txtUrl.Text.Trim()
     })
 
     $chosenMode = $null
     $chosenAudioFormat = "mp3"
     $chosenQuality = "1080p"
+    $chosenPlaylist = $false
 
     $btnAudio = $window.FindName("BtnAudio")
     $btnVideo = $window.FindName("BtnVideo")
@@ -358,6 +482,7 @@ if ($Mode -eq "prompt") {
     $btnAudio.Add_Click({
         $script:chosenMode = "audio"
         $script:Url = $txtUrl.Text.Trim()
+        $script:chosenPlaylist = [bool]$chkPlaylist.IsChecked
         $sel = $cmbAudio.SelectedItem
         if ($sel -and $sel.Content) {
             $script:chosenAudioFormat = $sel.Content.ToString().ToLower()
@@ -370,6 +495,7 @@ if ($Mode -eq "prompt") {
     $btnVideo.Add_Click({
         $script:chosenMode = "video"
         $script:Url = $txtUrl.Text.Trim()
+        $script:chosenPlaylist = [bool]$chkPlaylist.IsChecked
         $sel = $cmbVideo.SelectedItem
         $val = "1080p"
         if ($sel -and $sel.Content) {
@@ -397,6 +523,7 @@ if ($Mode -eq "prompt") {
     $Mode = $chosenMode
     $AudioFormat = $chosenAudioFormat
     $Quality = $chosenQuality
+    if ($chosenPlaylist) { $Playlist = $true }
 }
 
 # Validate URL pattern
@@ -422,11 +549,20 @@ if (Test-Path (Join-Path $ScriptDir "yt-dlp.exe")) {
     $YtDlp = Join-Path $RepoRoot "yt-dlp.exe"
 }
 
-$Cookies = Join-Path $RepoRoot "cookies.txt"
-if (-not (Test-Path $Cookies)) { $Cookies = Join-Path $ScriptDir "cookies.txt" }
+# Auto-update check throttled to every 24 hours
+Update-YtDlpNightly -YtDlpPath $YtDlp -TargetDir $RepoRoot
+
+# Resolve cookies (Local cookies.txt first, then Edge, Brave, Chrome fallback)
+$cookieArgs = Resolve-CookieArgs -RepoRoot $RepoRoot -ScriptDir $ScriptDir
 
 $DownloadsArchive = Join-Path $RepoRoot "downloads.txt"
 if (-not (Test-Path $DownloadsArchive)) { $DownloadsArchive = Join-Path $ScriptDir "downloads.txt" }
+
+# Determine playlist flag: default to --no-playlist unless explicitly confirmed or pure playlist URL
+$playlistArgs = @("--no-playlist")
+if ($Playlist -or ($Url -match '(youtube\.com|youtu\.be)/playlist\?')) {
+    $playlistArgs = @("--yes-playlist")
+}
 
 # Destination config
 if ($Mode -eq "audio") {
@@ -436,17 +572,19 @@ if ($Mode -eq "audio") {
     Show-Notification -Title "Downloading Audio ($AudioFormat)..." -Message "Extracting $AudioFormat and embedding metadata/artwork..." -TargetFolder $TargetFolder
 
     $argsList = @(
-        "--cookies", $Cookies,
-        "--yes-playlist",
-        "--download-archive", $DownloadsArchive,
-        "-f", "ba[ext=m4a]/ba",
-        "-x",
-        "--audio-format", $AudioFormat,
-        "--audio-quality", "0",
-        "--embed-metadata",
-        "--embed-thumbnail",
-        "-o", "$TargetFolder\%(playlist_title|Single)s\%(title)s.%(ext)s",
-        $Url
+        $cookieArgs +
+        $playlistArgs +
+        @(
+            "--download-archive", $DownloadsArchive,
+            "-f", "ba[ext=m4a]/ba",
+            "-x",
+            "--audio-format", $AudioFormat,
+            "--audio-quality", "0",
+            "--embed-metadata",
+            "--embed-thumbnail",
+            "-o", "$TargetFolder\%(playlist_title|Single)s\%(title)s.%(ext)s",
+            $Url
+        )
     )
 } else {
     $TargetFolder = "C:\Users\Aaradhya\Videos\yt-dlp"
@@ -463,19 +601,28 @@ if ($Mode -eq "audio") {
     Show-Notification -Title "Downloading Video ($Quality)..." -Message "Fetching video stream..." -TargetFolder $TargetFolder
 
     $argsList = @(
-        "--cookies", $Cookies,
-        "--yes-playlist",
-        "--download-archive", $DownloadsArchive,
-        "-f", $videoFormat,
-        "--merge-output-format", "mp4",
-        "--embed-metadata",
-        "--embed-thumbnail",
-        "-o", "$TargetFolder\%(playlist_title|Single)s\%(title)s.%(ext)s",
-        $Url
+        $cookieArgs +
+        $playlistArgs +
+        @(
+            "--download-archive", $DownloadsArchive,
+            "-f", $videoFormat,
+            "--merge-output-format", "mp4",
+            "--embed-metadata",
+            "--embed-thumbnail",
+            "-o", "$TargetFolder\%(playlist_title|Single)s\%(title)s.%(ext)s",
+            $Url
+        )
     )
 }
 
 & $YtDlp @argsList
+
+# If failed, attempt a force-update to nightly and retry download once
+if ($LASTEXITCODE -ne 0) {
+    Write-Warning "Download failed on first attempt. Forcing yt-dlp nightly update and retrying..."
+    Update-YtDlpNightly -YtDlpPath $YtDlp -TargetDir $RepoRoot -Force
+    & $YtDlp @argsList
+}
 
 if ($LASTEXITCODE -eq 0) {
     Show-Notification -Title "Download Complete!" -Message "Saved to $TargetFolder. Click to open." -TargetFolder $TargetFolder
