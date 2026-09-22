@@ -1,6 +1,8 @@
 # Downloader Scripts
 
-Modular PowerShell and Windows Batch automation suite for batch audio/video extraction via `yt-dlp` with automatic tag and thumbnail embedding, deduplication archives, and direct routing to `C:\Users\Aaradhya\Music`.
+Modular PowerShell and Windows Batch automation suite for batch audio/video extraction via `yt-dlp` with automatic tag and thumbnail embedding, deduplication archives, and dedicated routing:
+- **Audio / Music**: `C:\Users\Aaradhya\Music`
+- **Video**: `C:\Users\Aaradhya\Videos\yt-dlp`
 
 ## Repository Structure
 
@@ -28,12 +30,12 @@ Prompts for a single track or playlist URL, fetches metadata, embeds thumbnails 
 
 ### 2. Parameterized CLI
 ```powershell
-.\scripts\yt.ps1 -Mode mp3 -Url "https://youtu.be/..."
-.\scripts\yt.ps1 -Mode 720p -Url "https://youtu.be/..."
+.\scripts\yt.ps1 -Mode mp3 -Url "https://youtu.be/..."     # Saves to C:\Users\Aaradhya\Music
+.\scripts\yt.ps1 -Mode 720p -Url "https://youtu.be/..."   # Saves to C:\Users\Aaradhya\Videos\yt-dlp
 ```
 
 ### 3. Fast Video Batch Presets
-Double-click or run:
+Double-click or run (saves to `C:\Users\Aaradhya\Videos\yt-dlp\<Playlist or Single>\<Title>.mp4`):
 - `.\scripts\yt-video480.bat` (480p MP4)
 - `.\scripts\yt-video720.bat` (720p MP4)
 

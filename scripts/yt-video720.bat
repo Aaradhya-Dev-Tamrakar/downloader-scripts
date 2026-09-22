@@ -30,8 +30,8 @@ if exist "%REPO_ROOT%downloads.txt" (
 REM Ask for URL
 set /p URL=Enter YouTube or YouTube Music URL: 
 
-REM Target root folder
-set "OUTPUT_DIR=C:\Users\Aaradhya\Music"
+REM Target root folder (Videos)
+set "OUTPUT_DIR=C:\Users\Aaradhya\Videos\yt-dlp"
 if not exist "%OUTPUT_DIR%" mkdir "%OUTPUT_DIR%"
 
 REM yt-dlp command (720p MP4)

@@ -7,8 +7,16 @@ param (
     [string]$Url
 )
 
-# Output directory: C:\Users\Aaradhya\Music
-$OutputDir = "C:\Users\Aaradhya\Music"
+# Output directory configuration
+$MusicRoot = "C:\Users\Aaradhya\Music"
+$VideoRoot = "C:\Users\Aaradhya\Videos\yt-dlp"
+
+if ($Mode -eq "mp3") {
+    $OutputDir = $MusicRoot
+} else {
+    $OutputDir = $VideoRoot
+}
+
 if (-not (Test-Path $OutputDir)) {
     New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
 }
