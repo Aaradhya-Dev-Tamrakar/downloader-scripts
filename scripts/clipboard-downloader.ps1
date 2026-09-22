@@ -3,6 +3,9 @@ param (
     [ValidateSet("prompt", "audio", "video", "mp3", "720p", "1080p")]
     [string]$Mode = "prompt",
 
+    [ValidateSet("Best / 4K / 1440p", "1080p", "720p", "480p", "360p")]
+    [string]$Quality = "1080p",
+
     [string]$Url
 )
 
@@ -76,7 +79,7 @@ function Show-Notification {
     }
 }
 
-# If Mode is prompt, show dialog with auto-pasted link and 1-click format buttons
+# If Mode is prompt, show dialog with auto-pasted link, Quality dropdown, and 1-click buttons
 if ($Mode -eq "prompt") {
     Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
 
@@ -87,11 +90,12 @@ if ($Mode -eq "prompt") {
     [xml]$xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Downloader (yt-dlp)" Height="240" Width="470"
+        Title="Downloader (yt-dlp)" Height="290" Width="470"
         WindowStartupLocation="CenterScreen" WindowStyle="ToolWindow" ResizeMode="NoResize"
         Background="#18181b" Foreground="#f4f4f5" Topmost="True">
     <Grid Margin="22">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -100,15 +104,32 @@ if ($Mode -eq "prompt") {
         <TextBlock Grid.Row="0" Text="Download from YouTube" FontSize="16" FontWeight="SemiBold" Foreground="#ffffff" Margin="0,0,0,6"/>
         
         <TextBox Name="TxtUrl" Grid.Row="1" Height="34" FontSize="12" Padding="8,6"
-                 Background="#27272a" Foreground="#ffffff" BorderBrush="#3f3f46" BorderThickness="1" Margin="0,0,0,16">
+                 Background="#27272a" Foreground="#ffffff" BorderBrush="#3f3f46" BorderThickness="1" Margin="0,0,0,12">
             <TextBox.Resources>
                 <Style TargetType="Border">
                     <Setter Property="CornerRadius" Value="4"/>
                 </Style>
             </TextBox.Resources>
         </TextBox>
+
+        <!-- Video Quality Selection Dropdown -->
+        <Grid Grid.Row="2" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="Video Quality:" FontSize="13" Foreground="#a1a1aa" VerticalAlignment="Center" Margin="0,0,10,0"/>
+            <ComboBox Name="CmbQuality" Grid.Column="1" Height="32" FontSize="12"
+                      Background="#27272a" Foreground="#18181b" Cursor="Hand" VerticalContentAlignment="Center">
+                <ComboBoxItem Content="1080p (Full HD)" IsSelected="True"/>
+                <ComboBoxItem Content="Best / 4K / 1440p"/>
+                <ComboBoxItem Content="720p (HD)"/>
+                <ComboBoxItem Content="480p (Fast)"/>
+                <ComboBoxItem Content="360p (Data Saver)"/>
+            </ComboBox>
+        </Grid>
         
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center">
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center">
             <Button Name="BtnAudio" Content="[Audio] MP3" Width="195" Height="44" Margin="0,0,12,0"
                     Background="#2563eb" Foreground="#ffffff" FontSize="13" FontWeight="SemiBold" Cursor="Hand" BorderThickness="0">
                 <Button.Resources>
@@ -117,7 +138,7 @@ if ($Mode -eq "prompt") {
                     </Style>
                 </Button.Resources>
             </Button>
-            <Button Name="BtnVideo" Content="[Video] 1080p MP4" Width="195" Height="44"
+            <Button Name="BtnVideo" Content="[Video] Download" Width="195" Height="44"
                     Background="#059669" Foreground="#ffffff" FontSize="13" FontWeight="SemiBold" Cursor="Hand" BorderThickness="0">
                 <Button.Resources>
                     <Style TargetType="Border">
@@ -139,6 +160,8 @@ if ($Mode -eq "prompt") {
         $txtUrl.SelectAll()
     }
 
+    $cmbQuality = $window.FindName("CmbQuality")
+
     # Focus text box on load
     $window.Add_Loaded({
         $txtUrl.Focus()
@@ -149,6 +172,7 @@ if ($Mode -eq "prompt") {
     })
 
     $chosenMode = $null
+    $chosenQuality = "1080p"
     $btnAudio = $window.FindName("BtnAudio")
     $btnVideo = $window.FindName("BtnVideo")
 
@@ -161,6 +185,18 @@ if ($Mode -eq "prompt") {
     $btnVideo.Add_Click({
         $script:chosenMode = "video"
         $script:Url = $txtUrl.Text.Trim()
+        $selectedItem = $cmbQuality.SelectedItem.Content.ToString()
+        if ($selectedItem -match "4K|1440p|Best") {
+            $script:chosenQuality = "best"
+        } elseif ($selectedItem -match "720p") {
+            $script:chosenQuality = "720p"
+        } elseif ($selectedItem -match "480p") {
+            $script:chosenQuality = "480p"
+        } elseif ($selectedItem -match "360p") {
+            $script:chosenQuality = "360p"
+        } else {
+            $script:chosenQuality = "1080p"
+        }
         $window.Close()
     })
 
@@ -170,6 +206,7 @@ if ($Mode -eq "prompt") {
         exit 0
     }
     $Mode = $chosenMode
+    $Quality = $chosenQuality
 }
 
 # Validate URL pattern
@@ -181,7 +218,8 @@ if ([string]::IsNullOrWhiteSpace($Url) -or ($Url -notmatch "https?://(www\.|musi
 
 # Normalize Mode
 if ($Mode -eq "mp3") { $Mode = "audio" }
-if ($Mode -eq "720p" -or $Mode -eq "1080p") { $Mode = "video" }
+if ($Mode -eq "720p") { $Mode = "video"; $Quality = "720p" }
+if ($Mode -eq "1080p") { $Mode = "video"; $Quality = "1080p" }
 
 # Resolve paths
 $ScriptDir = $PSScriptRoot
@@ -224,13 +262,22 @@ if ($Mode -eq "audio") {
     $TargetFolder = "C:\Users\Aaradhya\Videos\yt-dlp"
     if (-not (Test-Path $TargetFolder)) { New-Item -ItemType Directory -Path $TargetFolder -Force | Out-Null }
 
-    Show-Notification -Title "Downloading Video..." -Message "Fetching 1080p/720p video stream..." -TargetFolder $TargetFolder
+    # Map quality string to yt-dlp format selector
+    $videoFormat = switch ($Quality) {
+        "best"  { "bv*+ba/b" }
+        "720p"  { "bv*[ext=mp4][height<=720]+ba[ext=m4a]/b[ext=mp4][height<=720]/b" }
+        "480p"  { "bv*[ext=mp4][height<=480]+ba[ext=m4a]/b[ext=mp4][height<=480]/b" }
+        "360p"  { "bv*[ext=mp4][height<=360]+ba[ext=m4a]/b[ext=mp4][height<=360]/b" }
+        default { "bv*[ext=mp4][height<=1080]+ba[ext=m4a]/b[ext=mp4][height<=1080]/b" }
+    }
+
+    Show-Notification -Title "Downloading Video ($Quality)..." -Message "Fetching video stream..." -TargetFolder $TargetFolder
 
     $argsList = @(
         "--cookies", $Cookies,
         "--yes-playlist",
         "--download-archive", $DownloadsArchive,
-        "-f", "bv*[ext=mp4][height<=1080]+ba[ext=m4a]/b[ext=mp4][height<=1080]/b",
+        "-f", $videoFormat,
         "--merge-output-format", "mp4",
         "--embed-metadata",
         "--embed-thumbnail",
