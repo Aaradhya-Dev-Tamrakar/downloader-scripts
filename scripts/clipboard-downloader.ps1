@@ -166,32 +166,16 @@ if ($Mode -eq "prompt") {
                             <TextBlock Text="Audio Stream" FontSize="12" FontWeight="SemiBold" Foreground="#60a5fa" VerticalAlignment="Center"/>
                             
                             <!-- Custom Dark Formatted ComboBox for Audio -->
-                            <ComboBox Name="CmbAudio" HorizontalAlignment="Right" Width="82" Height="26" SelectedIndex="0"
-                                      Background="#27272a" Foreground="#ffffff" BorderBrush="#3f3f46" BorderThickness="1"
-                                      FontSize="11" FontWeight="SemiBold" Cursor="Hand" VerticalContentAlignment="Center">
-                                <ComboBox.ItemContainerStyle>
-                                    <Style TargetType="ComboBoxItem">
-                                        <Setter Property="Background" Value="#27272a"/>
-                                        <Setter Property="Foreground" Value="#ffffff"/>
-                                        <Setter Property="Padding" Value="6,4"/>
-                                    </Style>
-                                </ComboBox.ItemContainerStyle>
-                                <ComboBoxItem IsSelected="True">
-                                    <TextBlock Text="MP3" Foreground="#ffffff" FontWeight="Bold"/>
-                                </ComboBoxItem>
-                                <ComboBoxItem>
-                                    <TextBlock Text="FLAC" Foreground="#ffffff" FontWeight="Bold"/>
-                                </ComboBoxItem>
-                                <ComboBoxItem>
-                                    <TextBlock Text="M4A" Foreground="#ffffff" FontWeight="Bold"/>
-                                </ComboBoxItem>
-                                <ComboBoxItem>
-                                    <TextBlock Text="OPUS" Foreground="#ffffff" FontWeight="Bold"/>
-                                </ComboBoxItem>
-                                <ComboBoxItem>
-                                    <TextBlock Text="WAV" Foreground="#ffffff" FontWeight="Bold"/>
-                                </ComboBoxItem>
-                            </ComboBox>
+                            <Border HorizontalAlignment="Right" Background="#27272a" CornerRadius="4" BorderBrush="#3f3f46" BorderThickness="1" Height="26" Width="82">
+                                <ComboBox Name="CmbAudio" Background="Transparent" Foreground="#ffffff" BorderThickness="0"
+                                          FontSize="11" FontWeight="SemiBold" Cursor="Hand" VerticalContentAlignment="Center" Padding="6,0,0,0">
+                                    <ComboBoxItem Content="MP3" IsSelected="True" Foreground="#ffffff" Background="#27272a" FontWeight="Bold"/>
+                                    <ComboBoxItem Content="FLAC" Foreground="#ffffff" Background="#27272a" FontWeight="Bold"/>
+                                    <ComboBoxItem Content="M4A" Foreground="#ffffff" Background="#27272a" FontWeight="Bold"/>
+                                    <ComboBoxItem Content="OPUS" Foreground="#ffffff" Background="#27272a" FontWeight="Bold"/>
+                                    <ComboBoxItem Content="WAV" Foreground="#ffffff" Background="#27272a" FontWeight="Bold"/>
+                                </ComboBox>
+                            </Border>
                         </Grid>
 
                         <TextBlock Grid.Row="1" Text="Embeds cover art &amp; ID3 tags" FontSize="11" Foreground="#71717a" Margin="0,0,0,10"/>
@@ -221,32 +205,16 @@ if ($Mode -eq "prompt") {
                             <TextBlock Text="Video Stream" FontSize="12" FontWeight="SemiBold" Foreground="#34d399" VerticalAlignment="Center"/>
                             
                             <!-- Custom Dark Formatted ComboBox for Video -->
-                            <ComboBox Name="CmbVideo" HorizontalAlignment="Right" Width="92" Height="26" SelectedIndex="0"
-                                      Background="#27272a" Foreground="#ffffff" BorderBrush="#3f3f46" BorderThickness="1"
-                                      FontSize="11" FontWeight="SemiBold" Cursor="Hand" VerticalContentAlignment="Center">
-                                <ComboBox.ItemContainerStyle>
-                                    <Style TargetType="ComboBoxItem">
-                                        <Setter Property="Background" Value="#27272a"/>
-                                        <Setter Property="Foreground" Value="#ffffff"/>
-                                        <Setter Property="Padding" Value="6,4"/>
-                                    </Style>
-                                </ComboBox.ItemContainerStyle>
-                                <ComboBoxItem IsSelected="True">
-                                    <TextBlock Text="1080p" Foreground="#ffffff" FontWeight="Bold"/>
-                                </ComboBoxItem>
-                                <ComboBoxItem>
-                                    <TextBlock Text="4K / Max" Foreground="#ffffff" FontWeight="Bold"/>
-                                </ComboBoxItem>
-                                <ComboBoxItem>
-                                    <TextBlock Text="720p" Foreground="#ffffff" FontWeight="Bold"/>
-                                </ComboBoxItem>
-                                <ComboBoxItem>
-                                    <TextBlock Text="480p" Foreground="#ffffff" FontWeight="Bold"/>
-                                </ComboBoxItem>
-                                <ComboBoxItem>
-                                    <TextBlock Text="360p" Foreground="#ffffff" FontWeight="Bold"/>
-                                </ComboBoxItem>
-                            </ComboBox>
+                            <Border HorizontalAlignment="Right" Background="#27272a" CornerRadius="4" BorderBrush="#3f3f46" BorderThickness="1" Height="26" Width="92">
+                                <ComboBox Name="CmbVideo" Background="Transparent" Foreground="#ffffff" BorderThickness="0"
+                                          FontSize="11" FontWeight="SemiBold" Cursor="Hand" VerticalContentAlignment="Center" Padding="6,0,0,0">
+                                    <ComboBoxItem Content="1080p" IsSelected="True" Foreground="#ffffff" Background="#27272a" FontWeight="Bold"/>
+                                    <ComboBoxItem Content="4K / Max" Foreground="#ffffff" Background="#27272a" FontWeight="Bold"/>
+                                    <ComboBoxItem Content="720p" Foreground="#ffffff" Background="#27272a" FontWeight="Bold"/>
+                                    <ComboBoxItem Content="480p" Foreground="#ffffff" Background="#27272a" FontWeight="Bold"/>
+                                    <ComboBoxItem Content="360p" Foreground="#ffffff" Background="#27272a" FontWeight="Bold"/>
+                                </ComboBox>
+                            </Border>
                         </Grid>
 
                         <TextBlock Grid.Row="1" Text="Direct to Videos\yt-dlp" FontSize="11" Foreground="#71717a" Margin="0,0,0,10"/>
@@ -299,6 +267,17 @@ if ($Mode -eq "prompt") {
     $cmbAudio = $window.FindName("CmbAudio")
     $cmbVideo = $window.FindName("CmbVideo")
 
+    # Force explicit black text when dropdown is rendered against Windows white system chrome
+    $fixItemText = {
+        param($cbControl)
+        foreach ($item in $cbControl.Items) {
+            $item.Foreground = [System.Windows.Media.Brushes]::Black
+            $item.FontWeight = [System.Windows.FontWeights]::Bold
+        }
+    }
+    &$fixItemText $cmbAudio
+    &$fixItemText $cmbVideo
+
     $window.Add_Loaded({
         $txtUrl.Focus()
         if ([string]::IsNullOrWhiteSpace($txtUrl.Text)) {
@@ -319,11 +298,7 @@ if ($Mode -eq "prompt") {
         $script:Url = $txtUrl.Text.Trim()
         $sel = $cmbAudio.SelectedItem
         if ($sel -and $sel.Content) {
-            if ($sel.Content -is [System.Windows.Controls.TextBlock]) {
-                $script:chosenAudioFormat = $sel.Content.Text.ToLower()
-            } else {
-                $script:chosenAudioFormat = $sel.Content.ToString().ToLower()
-            }
+            $script:chosenAudioFormat = $sel.Content.ToString().ToLower()
         } else {
             $script:chosenAudioFormat = "mp3"
         }
@@ -336,11 +311,7 @@ if ($Mode -eq "prompt") {
         $sel = $cmbVideo.SelectedItem
         $val = "1080p"
         if ($sel -and $sel.Content) {
-            if ($sel.Content -is [System.Windows.Controls.TextBlock]) {
-                $val = $sel.Content.Text
-            } else {
-                $val = $sel.Content.ToString()
-            }
+            $val = $sel.Content.ToString()
         }
         if ($val -match "4K|Max") {
             $script:chosenQuality = "best"
