@@ -1,37 +1,35 @@
 # Downloader Scripts
 
-Modular PowerShell and Windows Batch automation suite for batch audio/video extraction via `yt-dlp` with automatic tag and thumbnail embedding, deduplication archives, dedicated routing, and zero-click global hotkey integration:
+Modular PowerShell and Windows Batch automation suite for batch audio/video extraction via `yt-dlp` with automatic tag and thumbnail embedding, deduplication archives, dedicated routing, and single-shortcut integration:
 - **Audio / Music**: `C:\Users\Aaradhya\Music`
 - **Video**: `C:\Users\Aaradhya\Videos\yt-dlp`
 
 ---
 
-## ⚡ Option 1: Zero-Click Global Hotkeys (Recommended)
+## ⚡ The Single Shortcut Workflow
 
-Simply copy any YouTube or YouTube Music URL in your browser (`Ctrl + C`), then press:
+1. Copy any YouTube or YouTube Music URL (`Ctrl + C`).
+2. Hit <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>D</kbd> (or double-click **YouTube Downloader** on your Desktop).
+3. The link is **auto-pasted** into a clean, dark popup.
+4. Click:
+   - **🎵 Audio (MP3)** $\to$ Saves to `C:\Users\Aaradhya\Music\<Playlist|Single>\<Title>.mp3`
+   - **🎬 Video (1080p MP4)** $\to$ Saves to `C:\Users\Aaradhya\Videos\yt-dlp\<Playlist|Single>\<Title>.mp4`
 
-| Hotkey | Action | Destination |
-| :--- | :--- | :--- |
-| <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>D</kbd> | ⚡ **Popup Selector**: 1-click choose Audio vs Video | Prompts popup |
-| <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>M</kbd> | 🎵 **Instant Audio** (MP3 + Cover + ID3 Tags) | `C:\Users\Aaradhya\Music\<Playlist|Single>\<Title>.mp3` |
-| <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>V</kbd> | 🎬 **Instant Video** (1080p/720p HD MP4) | `C:\Users\Aaradhya\Videos\yt-dlp\<Playlist|Single>\<Title>.mp4` |
+*Native Windows Toast Notification pings on start and completion (click to open the folder).*
 
-*Sends a native Windows Toast Notification when downloading starts and when complete (with click-to-open).*
-
-### Reinstall / Setup Hotkeys
+### Reinstall / Repair Shortcut
 ```powershell
 .\scripts\setup-hotkeys.ps1
 ```
 
 ---
 
-## 💻 Terminal CLI & Profile Shortcuts
+## 💻 Terminal CLI
 
-Once configured, you can download from any PowerShell window without changing directories:
+From any PowerShell window:
 
-- `dl`  — Reads clipboard and opens 1-click format selector popup
-- `dlm` — Downloads audio directly from clipboard (or pass URL: `dlm "https://..."`)
-- `dlv` — Downloads video directly from clipboard (or pass URL: `dlv "https://..."`)
+- `dl` — Auto-pastes clipboard and opens the Audio / Video selector popup.
+- `dl "https://..."` — Opens the selector for the specified URL.
 
 ---
 
@@ -40,8 +38,8 @@ Once configured, you can download from any PowerShell window without changing di
 ```text
 Downloader scripts/
 ├── scripts/
-│   ├── clipboard-downloader.ps1 # Core zero-click engine with Toast notifications
-│   ├── setup-hotkeys.ps1        # Global hotkey & profile shortcut installer
+│   ├── clipboard-downloader.ps1 # Auto-paste GUI + Toast notification download engine
+│   ├── setup-hotkeys.ps1        # Desktop shortcut & hotkey installer
 │   ├── yt.ps1                   # Parameterized CLI downloader (-Mode mp3|720p -Url <url>)
 │   ├── yt-music.ps1             # Interactive YouTube Music downloader with tag/artwork embedding
 │   ├── yt-video480.bat          # Fast 480p batch video download preset

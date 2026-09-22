@@ -1,12 +1,14 @@
 <#
 .SYNOPSIS
-    Smart clipboard downloader with native mini prompt dialog or hotkey modes.
+    Smart clipboard downloader with native 1-click format selection dialog.
 
 .DESCRIPTION
-    Reads YouTube / YouTube Music URL from clipboard.
-    If mode is not specified (e.g. single hotkey Ctrl+Alt+D), pops a native,
-    dark-themed 1-click modal to choose [🎵 Audio (MP3)] or [🎬 Video (MP4)].
-    If mode is specified (-Mode audio | video), proceeds immediately with zero clicks.
+    Auto-detects and auto-pastes the YouTube or YouTube Music URL from the clipboard.
+    Shows an editable URL box (so you can review or paste a different link),
+    and gives you two 1-click buttons:
+      [🎵 Download Audio (MP3)] -> C:\Users\Aaradhya\Music
+      [🎬 Download Video (MP4)] -> C:\Users\Aaradhya\Videos\yt-dlp
+    Sends a native toast notification upon completion.
 #>
 
 [CmdletBinding()]
@@ -17,15 +19,18 @@ param (
     [string]$Url
 )
 
-# 1. Read URL from Clipboard if not provided via parameter
+# Read clipboard
+$clipboardText = ""
+try {
+    Add-Type -AssemblyName System.Windows.Forms
+    $clipboardText = [System.Windows.Forms.Clipboard]::GetText().Trim()
+} catch {
+    $clipboardText = (Get-Clipboard 2>$null)
+    if ($clipboardText) { $clipboardText = $clipboardText.Trim() }
+}
+
 if ([string]::IsNullOrWhiteSpace($Url)) {
-    try {
-        Add-Type -AssemblyName System.Windows.Forms
-        $Url = [System.Windows.Forms.Clipboard]::GetText().Trim()
-    } catch {
-        $Url = (Get-Clipboard 2>$null)
-        if ($Url) { $Url = $Url.Trim() }
-    }
+    $Url = $clipboardText
 }
 
 function Show-Notification {
@@ -63,43 +68,46 @@ function Show-Notification {
     }
 }
 
-# Validate URL pattern
-if ([string]::IsNullOrWhiteSpace($Url) -or ($Url -notmatch "https?://(www\.|music\.)?(youtube\.com|youtu\.be)/.+")) {
-    Show-Notification -Title "Downloader: No Valid URL" -Message "Clipboard does not contain a YouTube URL." -TargetFolder "C:\Users\Aaradhya\Music"
-    Write-Warning "Clipboard does not contain a valid YouTube or YouTube Music URL."
-    exit 1
-}
-
-# If Mode is "prompt", show modern lightweight WPF selector dialog
+# If Mode is prompt, show dialog with auto-pasted link and 1-click format buttons
 if ($Mode -eq "prompt") {
     Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
 
     [xml]$xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="yt-dlp Quick Downloader" Height="220" Width="430"
+        Title="Downloader (yt-dlp)" Height="230" Width="460"
         WindowStartupLocation="CenterScreen" WindowStyle="ToolWindow" ResizeMode="NoResize"
         Background="#18181b" Foreground="#f4f4f5" Topmost="True">
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <TextBlock Grid.Row="0" Text="Choose Download Format" FontSize="16" FontWeight="SemiBold" Foreground="#ffffff"/>
-        <TextBlock Grid.Row="1" Text="$([System.Security.SecurityElement]::Escape($Url))" FontSize="11" Foreground="#a1a1aa" TextTrimming="CharacterEllipsis" Margin="0,4,0,16"/>
+        
+        <TextBlock Grid.Row="0" Text="Download from YouTube" FontSize="16" FontWeight="SemiBold" Foreground="#ffffff" Margin="0,0,0,6"/>
+        
+        <TextBox Name="TxtUrl" Grid.Row="1" Height="32" FontSize="12" Padding="6,4"
+                 Background="#27272a" Foreground="#ffffff" BorderBrush="#3f3f46" BorderThickness="1" Margin="0,0,0,16">
+            <TextBox.Resources>
+                <Style TargetType="Border">
+                    <Setter Property="CornerRadius" Value="4"/>
+                </Style>
+            </TextBox.Resources>
+        </TextBox>
         
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Button Name="BtnAudio" Content="🎵 Audio (MP3 + Tags)" Width="175" Height="42" Margin="0,0,12,0"
-                    Background="#2563eb" Foreground="#ffffff" FontSize="13" FontWeight="Medium" Cursor="Hand" BorderThickness="0">
+            <Button Name="BtnAudio" Content="🎵 Audio (MP3)" Width="195" Height="44" Margin="0,0,12,0"
+                    Background="#2563eb" Foreground="#ffffff" FontSize="13" FontWeight="SemiBold" Cursor="Hand" BorderThickness="0">
                 <Button.Resources>
                     <Style TargetType="Border">
                         <Setter Property="CornerRadius" Value="6"/>
                     </Style>
                 </Button.Resources>
             </Button>
-            <Button Name="BtnVideo" Content="🎬 Video (1080p MP4)" Width="175" Height="42"
-                    Background="#059669" Foreground="#ffffff" FontSize="13" FontWeight="Medium" Cursor="Hand" BorderThickness="0">
+            <Button Name="BtnVideo" Content="🎬 Video (1080p MP4)" Width="195" Height="44"
+                    Background="#059669" Foreground="#ffffff" FontSize="13" FontWeight="SemiBold" Cursor="Hand" BorderThickness="0">
                 <Button.Resources>
                     <Style TargetType="Border">
                         <Setter Property="CornerRadius" Value="6"/>
@@ -114,27 +122,38 @@ if ($Mode -eq "prompt") {
     $reader = [System.Xml.XmlNodeReader]::new($xaml)
     $window = [System.Windows.Markup.XamlReader]::Load($reader)
 
+    $txtUrl = $window.FindName("TxtUrl")
+    $txtUrl.Text = $Url
+
     $chosenMode = $null
     $btnAudio = $window.FindName("BtnAudio")
     $btnVideo = $window.FindName("BtnVideo")
 
     $btnAudio.Add_Click({
         $script:chosenMode = "audio"
+        $script:Url = $txtUrl.Text.Trim()
         $window.Close()
     })
 
     $btnVideo.Add_Click({
         $script:chosenMode = "video"
+        $script:Url = $txtUrl.Text.Trim()
         $window.Close()
     })
 
     $window.ShowDialog() | Out-Null
 
     if (-not $chosenMode) {
-        # User closed window / cancelled
         exit 0
     }
     $Mode = $chosenMode
+}
+
+# Validate URL pattern
+if ([string]::IsNullOrWhiteSpace($Url) -or ($Url -notmatch "https?://(www\.|music\.)?(youtube\.com|youtu\.be)/.+")) {
+    Show-Notification -Title "Downloader: Invalid URL" -Message "Please enter or copy a valid YouTube URL." -TargetFolder "C:\Users\Aaradhya\Music"
+    Write-Warning "Not a valid YouTube URL: $Url"
+    exit 1
 }
 
 # Normalize Mode
@@ -163,7 +182,7 @@ if ($Mode -eq "audio") {
     $TargetFolder = "C:\Users\Aaradhya\Music"
     if (-not (Test-Path $TargetFolder)) { New-Item -ItemType Directory -Path $TargetFolder -Force | Out-Null }
 
-    Show-Notification -Title "Downloading Audio..." -Message "Fetching audio stream and embedding ID3 tags..." -TargetFolder $TargetFolder
+    Show-Notification -Title "Downloading Audio..." -Message "Extracting MP3 and embedding album art/tags..." -TargetFolder $TargetFolder
 
     $argsList = @(
         "--cookies", $Cookies,
