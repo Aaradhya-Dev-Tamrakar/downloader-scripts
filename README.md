@@ -11,10 +11,9 @@ Modular PowerShell and Windows Batch automation suite for batch audio/video extr
 1. Copy any YouTube or YouTube Music URL (`Ctrl + C`).
 2. Hit <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>D</kbd> (or double-click **`download.bat`** / **`YouTube Downloader.lnk`** on your Desktop).
 3. The link is **auto-pasted** into a clean, dark popup.
-4. Select desired **Video Quality** from the dropdown (`1080p Full HD`, `Best / 4K / 1440p`, `720p HD`, `480p`, or `360p`).
-5. Click:
-   - **🎵 [Audio] MP3** $\to$ Saves to `C:\Users\Aaradhya\Music\<Playlist|Single>\<Title>.mp3`
-   - **🎬 [Video] Download** $\to$ Saves to `C:\Users\Aaradhya\Videos\yt-dlp\<Playlist|Single>\<Title>.mp4`
+4. Directly select your format/quality on the buttons:
+   - **🎵 [Audio]** Button with integrated dropdown: `MP3` *(Default)*, `FLAC`, `M4A`, `OPUS`, or `WAV` $\to$ Saves to `C:\Users\Aaradhya\Music`
+   - **🎬 [Video]** Button with integrated dropdown: `1080p` *(Default)*, `4K / Max`, `720p`, `480p`, or `360p` $\to$ Saves to `C:\Users\Aaradhya\Videos\yt-dlp`
 
 *Native Windows Toast Notification pings on start and completion (click to open the folder).*
 
