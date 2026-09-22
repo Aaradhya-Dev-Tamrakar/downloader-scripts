@@ -1,0 +1,37 @@
+# Binaries & Executables
+*.exe
+yt-dlp.exe
+
+# Sensitive & Personal Data
+cookies.txt
+*.cookie
+*.cookies
+
+# Download history & state files
+downloads.txt
+*.xspf
+
+# Downloaded media directories / files
+*.mp3
+*.mp4
+*.m4a
+*.webm
+*.opus
+*.flac
+*.mkv
+
+# Ignore music & mix download folders
+/4 Sep 2026/
+/5SOS/
+/Audacity/
+/Dark Metal/
+/DArkSide mix/
+/July 4th 2026/
+/Kodaline Live/
+/Live mix/
+/Mix - TheFatRat/
+/Mix - Top 30 Songs of TheFatRat 2024 - Best Of TheFatRat - TheFatRat Mega Mix/
+/Niall Horan Mix/
+/Pop Rock/
+/Single/
+/Smash into pieces mix/
