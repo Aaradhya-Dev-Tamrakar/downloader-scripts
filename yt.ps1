@@ -7,8 +7,14 @@ param (
     [string]$Url
 )
 
-$Cookies = "cookies.txt"
-$Output = "%(title)s.%(ext)s"
+# Output directory: C:\Users\Aaradhya\Music
+$OutputDir = "C:\Users\Aaradhya\Music"
+if (-not (Test-Path $OutputDir)) {
+    New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
+}
+
+$Cookies = Join-Path $PSScriptRoot "cookies.txt"
+$Output = "$OutputDir\%(title)s.%(ext)s"
 
 if ($Mode -eq "mp3") {
     yt-dlp `
